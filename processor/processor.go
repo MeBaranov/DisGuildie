@@ -1,8 +1,6 @@
 package processor
 
 import (
-	"strings"
-
 	"github.com/bwmarrin/discordgo"
 
 	"github.com/mebaranov/disguildie/processor/helpers"
@@ -10,7 +8,7 @@ import (
 )
 
 type MessageProcessor interface {
-	ProcessMessage(s *discordgo.Session, c *string, m *string)
+	ProcessMessage(s *discordgo.Session, c *string, m *string, mc *discordgo.MessageCreate)
 }
 
 var availableCommands = map[string]MessageProcessor{
@@ -19,17 +17,12 @@ var availableCommands = map[string]MessageProcessor{
 
 type Processor struct{}
 
-func (proc *Processor) ProcessMessage(s *discordgo.Session, c *string, m *string) {
-	if !strings.HasPrefix(*m, "!") {
-		return
-	}
-
+func (proc *Processor) ProcessMessage(s *discordgo.Session, c *string, m *string, mc *discordgo.MessageCreate) {
 	cmd, obj := utility.NextCommand(m)
-	s.ChannelMessageSend(*c, "CMD:"+cmd+"\n OBJ:"+obj)
 	p, ok := availableCommands[cmd]
 	if !ok {
 		return
 	}
 
-	p.ProcessMessage(s, c, &obj)
+	p.ProcessMessage(s, c, &obj, mc)
 }

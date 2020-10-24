@@ -4,12 +4,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 
 	"github.com/mebaranov/disguildie/cmd"
 	"github.com/mebaranov/disguildie/processor"
+	"github.com/mebaranov/disguildie/utility"
 )
 
 const readyTimeout = time.Second * 10
@@ -99,9 +101,12 @@ func ready(s *discordgo.Session, r *discordgo.Ready) {
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
+	if m.Author.ID == s.State.User.ID || !strings.HasPrefix(m.Content, "!g") {
 		return
 	}
 
-	messageProcessor.ProcessMessage(s, &(m.ChannelID), &(m.Content))
+	fmt.Println("Content:", m.Content)
+	fmt.Println("Message:", m.Mentions)
+	_, msg := utility.NextCommand(&(m.Content))
+	messageProcessor.ProcessMessage(s, &(m.ChannelID), &msg, m)
 }

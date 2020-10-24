@@ -48,6 +48,6 @@ That's all for now. Good luck and have fun :)`
 
 type HelpProcessor struct{}
 
-func (hp *HelpProcessor) ProcessMessage(s *discordgo.Session, c *string, m *string) {
+func (hp *HelpProcessor) ProcessMessage(s *discordgo.Session, c *string, m *string, mc *discordgo.MessageCreate) {
 	utility.SendMonitored(s, c, &help)
 }
