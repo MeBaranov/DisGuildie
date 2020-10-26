@@ -12,12 +12,13 @@ type Void struct{}
 var Member Void
 
 type Guild struct {
-	GuildId    uuid.UUID
-	ParentId   uuid.UUID
-	DiscordId  string
-	Name       string
-	Stats      map[string]string
-	ChildNames map[string]Void
+	GuildId          uuid.UUID
+	ParentId         uuid.UUID
+	TopLevelParentId uuid.UUID
+	DiscordId        string
+	Name             string
+	Stats            map[string]string
+	ChildNames       map[string]Void
 }
 
 type User struct {
@@ -28,67 +29,66 @@ type User struct {
 }
 
 type Character struct {
-	CharId uuid.UUID
+	CharId string
 	UserId uuid.UUID
 	Name   string
-	IsMain bool
+	Main   bool
 	Body   map[string]interface{}
 }
 
 type Role struct {
-	GuildId     uuid.UUID
-	Users       []uuid.UUID
-	DiscordId   string
+	GuildId     string
+	Id          string
 	Permissions int
 }
 
 type Money struct {
-	GuildId uuid.UUID
-	UserId  uuid.UUID
+	GuildId string
+	UserId  string
 	ValidTo time.Time
 	Price   int
 }
 
 type DataProvider interface {
-	AddGuild(g Guild) *Guild
-	GetGuild(d string) *Guild
-	GetGuildD(g uuid.UUID) *Guild
-	RenameGuild(g uuid.UUID, name string) *Guild
-	RestatGuild(g uuid.UUID, name string) *Guild
-	RemoveGuild(g uuid.UUID) *Guild
-	RemoveGuildD(d string) *Guild
+	AddGuild(g *Guild) (*Guild, error)
+	GetGuild(g uuid.UUID) (*Guild, error)
+	GetGuildD(d string) (*Guild, error)
+	RenameGuild(g uuid.UUID, name string) (*Guild, error)
+	AddGuildStat(g uuid.UUID, n string, t string) (*Guild, error)
+	RemoveGuildStat(g uuid.UUID, n string) (*Guild, error)
+	RemoveGuild(g uuid.UUID) (*Guild, error)
+	RemoveGuildD(d string) (*Guild, error)
 
-	AddUser(u User) *User
-	GetUser(d string, g uuid.UUID) *User
-	SetUserPermissions(u uuid.UUID, p int)
-	RemoveUser(u uuid.UUID) *User
-	RemoveUserD(d string) *User
+	AddUser(u *User) (*User, error)
+	GetUser(d string, g uuid.UUID) (*User, error)
+	SetUserPermissions(u uuid.UUID, p int) (*User, error)
+	RemoveUser(u uuid.UUID) (*User, error)
+	RemoveUserD(d string) (*User, error)
 
-	AddCharacter(u uuid.UUID, name string, IsMain bool)
-	GetCharacters(u uuid.UUID) *[]Character
-	GetMainCharacter(u uuid.UUID) *Character
-	GetCharacter(c uuid.UUID) *Character
-	RenameCharacter(c uuid.UUID, name string) *Character
-	ChangeMainCharacter(c uuid.UUID, IsMain bool) *Character
-	SetCharacterStat(c uuid.UUID, s string, v interface{}) *Character
-	ChangeCharacterOwner(c uuid.UUID, u uuid.UUID) *Character
-	RemoveCharacterStat(c uuid.UUID, s string) *Character
-	RemoveCharacter(c uuid.UUID) *Character
+	AddCharacter(c *Character) (*Character, error)
+	GetCharacters(u uuid.UUID) ([]*Character, error)
+	GetMainCharacter(u uuid.UUID) (*Character, error)
+	GetCharacter(u uuid.UUID, n string) (*Character, error)
+	RenameCharacter(u uuid.UUID, old string, name string) (*Character, error)
+	ChangeMainCharacter(u uuid.UUID, name string) (*Character, error)
+	SetCharacterStat(u uuid.UUID, name string, s string, v interface{}) (*Character, error)
+	ChangeCharacterOwner(old uuid.UUID, name string, u uuid.UUID) (*Character, error)
+	RemoveCharacterStat(u uuid.UUID, name string, s string) (*Character, error)
+	RemoveCharacter(u uuid.UUID, name string) (*Character, error)
 
-	AddRole(r Role) *Role
-	GetRole(g uuid.UUID, d string) *Role
-	GetRolesUser(u uuid.UUID) *[]Role
-	GetRolesGuild(g uuid.UUID) *[]Role
-	SetRolePermissions(r uuid.UUID) *Role
-	RemoveRole(r uuid.UUID) *Role
+	AddRole(r *Role) (*Role, error)
+	GetRole(g string, r string) (*Role, error)
+	GetGuildRoles(g string) ([]*Role, error)
+	SetRolePermissions(g string, r string, p int) (*Role, error)
+	RemoveRole(g string, r string) (*Role, error)
 
-	AddMoney(m Money) Money
-	GetMoneyGuid(g uuid.UUID) Money
-	ChangeGuildOwner(g uuid.UUID, u uuid.UUID) Money
-	SetMoneyValid(m uuid.UUID, t time.Time) Money
+	AddMoney(m *Money) (*Money, error)
+	GetMoneyGuid(g string) (*Money, error)
+	ChangeGuildOwner(g string, u string) (*Money, error)
+	SetMoneyValid(g string, t time.Time) (*Money, error)
 
-	Export() string
-	Import(s string)
+	Export() ([]byte, error)
+	Import(b []byte) error
 }
 
 type DbError struct {
@@ -102,7 +102,19 @@ func (e *DbError) Error() string {
 
 const (
 	_ = iota
+	ConnectionError
 	InvalidGuildDefinition
-	InvalidGuildDBState
+	InvalidDatabaseState
 	SubguildNameTaken
+	GuildNotFound
+	StatNameConflict
+	UserNotFound
+	NoMainCharacterSpecified
+	CharacterNotFound
+	CharacterNameTaken
+	UserHasCharacter
+	RoleAlreadyExists
+	RoleNotFound
+	MoneyAlreadyRegistered
+	MoneyNotFound
 )

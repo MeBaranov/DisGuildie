@@ -14,7 +14,7 @@ type UserMemoryDb struct {
 	mux    sync.Mutex
 }
 
-func (udb *UserMemoryDb) AddUser(u *database.User) *database.User {
+func (udb *UserMemoryDb) AddUser(u *database.User) (*database.User, error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
@@ -25,7 +25,7 @@ func (udb *UserMemoryDb) AddUser(u *database.User) *database.User {
 			}
 		}
 
-		return user
+		return user, nil
 	}
 
 	uid := uuid.New()
@@ -33,49 +33,52 @@ func (udb *UserMemoryDb) AddUser(u *database.User) *database.User {
 	udb.users[uid] = u
 	udb.usersD[u.DiscordId] = u
 
-	return u
+	return u, nil
 }
 
-func (udb *UserMemoryDb) GetUser(d string, g uuid.UUID) *database.User {
+func (udb *UserMemoryDb) GetUser(d string, g uuid.UUID) (*database.User, error) {
 	if user, ok := udb.usersD[d]; ok {
-		return user
+		return user, nil
 	}
 
-	return nil
+	return nil, &database.DbError{Code: database.UserNotFound, Message: "User was not found"}
 }
 
-func (udb *UserMemoryDb) SetUserPermissions(u uuid.UUID, p int) {
+func (udb *UserMemoryDb) SetUserPermissions(u uuid.UUID, p int) (*database.User, error) {
 	if user, ok := udb.users[u]; ok {
 		user.Permissions = p
+		return user, nil
 	}
+
+	return nil, &database.DbError{Code: database.UserNotFound, Message: "User was not found"}
 }
 
-func (udb *UserMemoryDb) RemoveUser(u uuid.UUID) *database.User {
+func (udb *UserMemoryDb) RemoveUser(u uuid.UUID) (*database.User, error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
 	user, ok := udb.users[u]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	delete(udb.users, u)
 	delete(udb.usersD, user.DiscordId)
 
-	return user
+	return user, nil
 }
 
-func (udb *UserMemoryDb) RemoveUserD(d string) *database.User {
+func (udb *UserMemoryDb) RemoveUserD(d string) (*database.User, error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
 	user, ok := udb.usersD[d]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	delete(udb.users, user.UserId)
 	delete(udb.usersD, d)
 
-	return user
+	return user, nil
 }
