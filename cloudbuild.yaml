@@ -6,6 +6,6 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE']
 - name: "gcr.io/cloud-builders/gcloud"
-  args: ["app", "deploy", "--image-url=$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE"]
+  args: ["app", "deploy", "app.yaml", "--image-url=$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE:latest"]
 images:
   - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE'
