@@ -2,6 +2,10 @@ steps:
 - name: golang
   args: ['go', 'build', '.']
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', 'us-west1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE', '.', '--build-arg', "token=$_TOKEN" ]
+  args: [ 'build', '-t', '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE', '.', '--build-arg', "token=$_TOKEN" ]
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE']
+- name: "gcr.io/cloud-builders/gcloud"
+  args: ["app", "deploy", "--image-url=$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE"]
 images:
-  - 'us-west1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE'
+  - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE'
