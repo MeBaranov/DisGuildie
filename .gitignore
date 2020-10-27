@@ -16,3 +16,6 @@
 
 # vscode settings
 .vscode/*
+
+# linux binary
+/disguildie
