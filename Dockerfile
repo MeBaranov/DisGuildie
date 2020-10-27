@@ -1,3 +1,3 @@
 FROM alpine
-COPY disguildie /app
+COPY disguildie /app/disguildie
 CMD ["/app/disguildie"]
