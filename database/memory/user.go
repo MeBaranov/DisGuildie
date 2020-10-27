@@ -41,7 +41,7 @@ func (udb *UserMemoryDb) GetUser(d string, g uuid.UUID) (*database.User, error) 
 		return user, nil
 	}
 
-	return nil, &database.DbError{Code: database.UserNotFound, Message: "User was not found"}
+	return nil, &database.Error{Code: database.UserNotFound, Message: "User was not found"}
 }
 
 func (udb *UserMemoryDb) SetUserPermissions(u uuid.UUID, p int) (*database.User, error) {
@@ -50,7 +50,7 @@ func (udb *UserMemoryDb) SetUserPermissions(u uuid.UUID, p int) (*database.User,
 		return user, nil
 	}
 
-	return nil, &database.DbError{Code: database.UserNotFound, Message: "User was not found"}
+	return nil, &database.Error{Code: database.UserNotFound, Message: "User was not found"}
 }
 
 func (udb *UserMemoryDb) RemoveUser(u uuid.UUID) (*database.User, error) {

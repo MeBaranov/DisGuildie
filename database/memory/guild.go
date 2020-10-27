@@ -27,7 +27,7 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, error) {
 	} else {
 		p, ok := gdb.guilds[g.ParentId]
 		if !ok {
-			return nil, &database.DbError{Code: database.InvalidGuildDefinition, Message: "Invalid parent guild ID"}
+			return nil, &database.Error{Code: database.InvalidGuildDefinition, Message: "Invalid parent guild ID"}
 		}
 
 		if p.DiscordId != "" {
@@ -38,11 +38,11 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, error) {
 
 		p, ok = gdb.guilds[g.TopLevelParentId]
 		if !ok {
-			return nil, &database.DbError{Code: database.InvalidDatabaseState, Message: fmt.Sprintln("Invalid top level guild ID:", g.TopLevelParentId)}
+			return nil, &database.Error{Code: database.InvalidDatabaseState, Message: fmt.Sprintln("Invalid top level guild ID:", g.TopLevelParentId)}
 		}
 
 		if _, ok := p.ChildNames[g.Name]; ok {
-			return nil, &database.DbError{Code: database.SubguildNameTaken, Message: "Sub-Guild name already taken"}
+			return nil, &database.Error{Code: database.SubguildNameTaken, Message: "Sub-Guild name already taken"}
 		}
 
 		p.ChildNames[g.Name] = database.Member
@@ -62,7 +62,7 @@ func (gdb *GuildMemoryDb) GetGuild(g uuid.UUID) (*database.Guild, error) {
 		return guild, nil
 	}
 
-	return nil, &database.DbError{Code: database.GuildNotFound, Message: "Guild was not found"}
+	return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
 }
 
 func (gdb *GuildMemoryDb) GetGuildD(d string) (*database.Guild, error) {
@@ -70,7 +70,7 @@ func (gdb *GuildMemoryDb) GetGuildD(d string) (*database.Guild, error) {
 		return guild, nil
 	}
 
-	return nil, &database.DbError{Code: database.GuildNotFound, Message: "Guild was not found"}
+	return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
 }
 
 func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild, error) {
@@ -79,7 +79,7 @@ func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild
 
 	guild, ok := gdb.guilds[g]
 	if !ok {
-		return nil, &database.DbError{Code: database.GuildNotFound, Message: "Guild was not found"}
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
 	}
 
 	if guild.Name == name {
@@ -88,11 +88,11 @@ func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild
 
 	p, ok := gdb.guilds[guild.TopLevelParentId]
 	if !ok {
-		return nil, &database.DbError{Code: database.InvalidDatabaseState, Message: fmt.Sprintln("Invalid top level guild ID:", guild.TopLevelParentId)}
+		return nil, &database.Error{Code: database.InvalidDatabaseState, Message: fmt.Sprintln("Invalid top level guild ID:", guild.TopLevelParentId)}
 	}
 
 	if _, ok := p.ChildNames[name]; ok {
-		return nil, &database.DbError{Code: database.SubguildNameTaken, Message: "Sub-Guild name already taken"}
+		return nil, &database.Error{Code: database.SubguildNameTaken, Message: "Sub-Guild name already taken"}
 	}
 
 	delete(p.ChildNames, guild.Name)
@@ -108,14 +108,14 @@ func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, n string, t string) (*databa
 
 	guild, ok := gdb.guilds[g]
 	if !ok {
-		return nil, &database.DbError{Code: database.GuildNotFound, Message: "Guild was not found"}
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
 	}
 
 	if et, ok := guild.Stats[n]; ok {
 		if et == t {
 			return guild, nil
 		} else {
-			return nil, &database.DbError{Code: database.StatNameConflict, Message: "Stat with same name but different type found"}
+			return nil, &database.Error{Code: database.StatNameConflict, Message: "Stat with same name but different type found"}
 		}
 	}
 
@@ -129,7 +129,7 @@ func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guil
 
 	guild, ok := gdb.guilds[g]
 	if !ok {
-		return nil, &database.DbError{Code: database.GuildNotFound, Message: "Guild was not found"}
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
 	}
 
 	delete(guild.Stats, n)

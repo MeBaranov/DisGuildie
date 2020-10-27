@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"io"
 
+	"github.com/google/uuid"
 	"github.com/mebaranov/disguildie/database"
 )
 
@@ -14,6 +15,19 @@ type MemoryDB struct {
 	MoneyMemoryDb
 	RoleMemoryDb
 	UserMemoryDb
+}
+
+// constructor function
+func NewMemoryDb() *MemoryDB {
+	m := MemoryDB{}
+	m.chars = make(map[string]*database.Character)
+	m.guilds = make(map[uuid.UUID]*database.Guild)
+	m.guildsD = make(map[string]*database.Guild)
+	m.money = make(map[string]*database.Money)
+	m.roles = make(map[string]*database.Role)
+	m.users = make(map[uuid.UUID]*database.User)
+	m.usersD = make(map[string]*database.User)
+	return &m
 }
 
 func (m *MemoryDB) Export() ([]byte, error) {

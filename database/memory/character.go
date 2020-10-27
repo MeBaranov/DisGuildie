@@ -20,7 +20,7 @@ func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Characte
 
 	c.CharId = getCharacterId(c.UserId, c.Name)
 	if _, ok := cdb.chars[c.CharId]; ok {
-		return nil, &database.DbError{Code: database.CharacterNameTaken, Message: "User already has character with that name"}
+		return nil, &database.Error{Code: database.CharacterNameTaken, Message: fmt.Sprintf("User already has character with name %v", c.Name)}
 	}
 
 	cdb.chars[c.CharId] = c
@@ -52,7 +52,11 @@ func (cdb *CharMemoryDb) GetMainCharacter(u uuid.UUID) (*database.Character, err
 		}
 	}
 
-	return rv, &database.DbError{Code: database.NoMainCharacterSpecified, Message: "No main character specified"}
+	if rv == nil {
+		return nil, &database.Error{Code: database.CharacterNotFound, Message: fmt.Sprintf("No Characters found")}
+	}
+
+	return rv, nil
 }
 
 func (cdb *CharMemoryDb) GetCharacter(u uuid.UUID, name string) (*database.Character, error) {
@@ -65,7 +69,7 @@ func (cdb *CharMemoryDb) GetCharacter(u uuid.UUID, name string) (*database.Chara
 		return c, nil
 	}
 
-	return nil, &database.DbError{Code: database.CharacterNotFound, Message: "Character with that name was not found"}
+	return nil, &database.Error{Code: database.CharacterNotFound, Message: fmt.Sprintf("Character with name %v was not found", name)}
 }
 
 func (cdb *CharMemoryDb) RenameCharacter(u uuid.UUID, old string, name string) (*database.Character, error) {
@@ -79,7 +83,7 @@ func (cdb *CharMemoryDb) RenameCharacter(u uuid.UUID, old string, name string) (
 
 	_, err = cdb.GetCharacter(u, name)
 	if err == nil {
-		return nil, &database.DbError{Code: database.CharacterNotFound, Message: "Character with that name already exists"}
+		return nil, &database.Error{Code: database.CharacterNameTaken, Message: "Character with that name already exists"}
 	}
 
 	c.Name = name
@@ -127,7 +131,7 @@ func (cdb *CharMemoryDb) ChangeCharacterOwner(old uuid.UUID, name string, u uuid
 
 	_, err = cdb.GetCharacter(u, name)
 	if err == nil {
-		return nil, &database.DbError{Code: database.UserHasCharacter, Message: "Target user already has character with that name"}
+		return nil, &database.Error{Code: database.UserHasCharacter, Message: "Target user already has character with that name"}
 	}
 
 	c.UserId = u

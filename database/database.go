@@ -91,12 +91,13 @@ type DataProvider interface {
 	Import(b []byte) error
 }
 
-type DbError struct {
-	Code    int
+type ErrorCode int
+type Error struct {
+	Code    ErrorCode
 	Message string
 }
 
-func (e *DbError) Error() string {
+func (e *Error) Error() string {
 	return fmt.Sprintf("Error '%v': %v", e.Code, e.Message)
 }
 

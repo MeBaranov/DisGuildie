@@ -18,7 +18,7 @@ func (rdb *RoleMemoryDb) AddRole(r *database.Role) (*database.Role, error) {
 
 	id := getRoleId(r.GuildId, r.Id)
 	if _, ok := rdb.roles[id]; ok {
-		return nil, &database.DbError{Code: database.RoleAlreadyExists, Message: "Role with that name already exists"}
+		return nil, &database.Error{Code: database.RoleAlreadyExists, Message: "Role with that name already exists"}
 	}
 
 	rdb.roles[id] = r
@@ -31,7 +31,7 @@ func (rdb *RoleMemoryDb) GetRole(g string, r string) (*database.Role, error) {
 		return r, nil
 	}
 
-	return nil, &database.DbError{Code: database.NoMainCharacterSpecified, Message: "No main character specified"}
+	return nil, &database.Error{Code: database.NoMainCharacterSpecified, Message: "No main character specified"}
 }
 
 func (rdb *RoleMemoryDb) GetGuildRoles(g string) ([]*database.Role, error) {
@@ -50,7 +50,7 @@ func (rdb *RoleMemoryDb) SetRolePermissions(g string, r string, p int) (*databas
 	role, ok := rdb.roles[id]
 
 	if !ok {
-		return nil, &database.DbError{Code: database.RoleNotFound, Message: "Role was not found"}
+		return nil, &database.Error{Code: database.RoleNotFound, Message: "Role was not found"}
 	}
 
 	role.Permissions = p
