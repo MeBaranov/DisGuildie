@@ -4,12 +4,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 
-	"github.com/mebaranov/disguildie/cmd"
 	"github.com/mebaranov/disguildie/processor"
 	"github.com/mebaranov/disguildie/utility"
 )
@@ -76,10 +76,10 @@ func main() {
 	}
 
 	runningChannel := make(chan bool)
-	go cmd.Start(runningChannel)
+	// go cmd.Start(runningChannel)
 	<-runningChannel
 
-	fmt.Println("Exitting. Hoping to do it gracefully")
+	fmt.Println("Exitting. Hoping to do it gracefully.")
 }
 
 func setUp() (token string, err error) {
@@ -88,7 +88,11 @@ func setUp() (token string, err error) {
 	flag.Parse()
 
 	if token == "" {
-		err = errors.New("No token provided. Please run this app with \"-t <bot token>\"")
+		token = os.Getenv("BOT_TOKEN")
+
+		if token == "" {
+			err = errors.New("No token provided. Please run this app with \"-t <bot token>\" or with BOT_TOKEN environment variable set")
+		}
 	}
 
 	messageProcessor = &processor.Processor{}

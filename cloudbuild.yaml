@@ -2,6 +2,6 @@ steps:
 - name: golang
   args: ['go', 'build', '.']
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', 'us-west1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE', '.' ]
+  args: [ 'build', '-t', 'us-west1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE', '.', '--build-arg', "token=\"$_TOKEN\"" ]
 images:
   - 'us-west1-docker.pkg.dev/$PROJECT_ID/$_REPO/$_IMAGE'
