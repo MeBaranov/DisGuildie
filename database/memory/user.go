@@ -19,7 +19,7 @@ func (udb *UserMemoryDb) AddUser(u *database.User) (*database.User, error) {
 	defer udb.mux.Unlock()
 
 	if user, ok := udb.usersD[u.DiscordId]; ok {
-		for val, _ := range u.GuildIds {
+		for val := range u.GuildIds {
 			if _, e := user.GuildIds[val]; !e {
 				user.GuildIds[val] = database.Member
 			}

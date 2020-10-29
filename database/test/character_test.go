@@ -2,6 +2,7 @@ package memory_test
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
@@ -26,7 +27,7 @@ func TestAdd(t *testing.T) {
 		rc, err := d.AddCharacter(c)
 
 		if err != nil {
-			t.Fatalf("[%v] No errors expected adding character. Received: %v", n, err)
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, rc, c)
@@ -39,7 +40,7 @@ func TestAdd(t *testing.T) {
 		rc, err = d.AddCharacter(c)
 
 		if err != nil {
-			t.Fatalf("[%v] No errors expected adding second character. Received: %v", n, err)
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
@@ -52,9 +53,11 @@ func TestAdd(t *testing.T) {
 		rc, err = d.AddCharacter(c)
 
 		if err == nil {
-			t.Fatalf("[%v] Errors expected adding third character. Received: %v", n, rc)
+			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
-		assertError(t, err, fmt.Sprintf("User already has character with name %v", c.Name), database.CharacterNameTaken, n)
+		if e := assertError(t, err, fmt.Sprintf("User already has character with name %v", c.Name), database.CharacterNameTaken, n); e != "" {
+			t.Fatalf(e)
+		}
 
 		c = &database.Character{
 			Name:   "test2",
@@ -63,7 +66,7 @@ func TestAdd(t *testing.T) {
 		rc, err = d.AddCharacter(c)
 
 		if err != nil {
-			t.Fatalf("[%v] No errors expected adding third character. Received: %v", n, err)
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong third character returned. Actual: %v, expected: %v", n, rc, c)
@@ -79,7 +82,9 @@ func TestGet(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n)
+		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
 
 		c := &database.Character{
 			Name:   name,
@@ -99,13 +104,17 @@ func TestGet(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		assertError(t, err, "Character with name test2 was not found", database.CharacterNotFound, n)
+		if e := assertError(t, err, "Character with name test2 was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
 
 		rc, err = d.GetCharacter(uuid.New(), name)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n)
+		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
 	}
 }
 
@@ -117,7 +126,9 @@ func TestGetMain(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		assertError(t, err, "No Characters found", database.CharacterNotFound, n)
+		if e := assertError(t, err, "No Characters found", database.CharacterNotFound, n); e != "" {
+			t.Fatal(e)
+		}
 
 		c := &database.Character{
 			Name:   "test3",
@@ -172,7 +183,9 @@ func TestGetNameless(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		assertError(t, err, "No Characters found", database.CharacterNotFound, n)
+		if e := assertError(t, err, "No Characters found", database.CharacterNotFound, n); e != "" {
+			t.Fatal(e)
+		}
 
 		c := &database.Character{
 			Name:   "test3",
@@ -321,7 +334,9 @@ func TestRename(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n)
+		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatal(e)
+		}
 
 		c = &database.Character{
 			Name:   name,
@@ -333,7 +348,9 @@ func TestRename(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		assertError(t, err, "Character with that name already exists", database.CharacterNameTaken, n)
+		if e := assertError(t, err, "Character with that name already exists", database.CharacterNameTaken, n); e != "" {
+			t.Fatal(e)
+		}
 
 		rc, err = d.GetCharacter(u, "test2")
 		if err != nil {
@@ -362,6 +379,88 @@ func TestRename(t *testing.T) {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
 		if rc.Name != "test2" || rc.UserId != c.UserId {
+			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+	}
+}
+
+func TestChangeOwner(t *testing.T) {
+	for n, d := range testable {
+		u, name, u2 := uuid.New(), "test", uuid.New()
+
+		rc, err := d.ChangeCharacterOwner(u, name, u2)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
+		}
+		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatal(e)
+		}
+
+		c := &database.Character{
+			Name:   name,
+			UserId: u,
+		}
+		d.AddCharacter(c)
+
+		rc, err = d.ChangeCharacterOwner(u, name, u2)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if rc.Name != name || rc.UserId != u2 {
+			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, *rc, *c)
+		}
+
+		rcs, err := d.GetCharacters(u)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if len(rcs) != 0 {
+			t.Fatalf("[%v] Wrong characters amount returned. Actual: %v, expected: %v", n, rcs, "empty")
+		}
+
+		rcs, err = d.GetCharacters(u2)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if len(rcs) != 1 {
+			t.Fatalf("[%v] Wrong characters amount returned. Actual: %v, expected: %v", n, rcs, 1)
+		}
+
+		rc, err = d.GetCharacter(u, name)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
+		}
+		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatal(e)
+		}
+
+		c = &database.Character{
+			Name:   name,
+			UserId: u,
+		}
+		d.AddCharacter(c)
+
+		rc, err = d.ChangeCharacterOwner(u, name, u2)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
+		}
+		if e := assertError(t, err, "Target user already has character with name 'test'", database.UserHasCharacter, n); e != "" {
+			t.Fatal(e)
+		}
+
+		rc, err = d.GetCharacter(u2, name)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if rc.Name != name || rc.UserId != u2 {
+			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+
+		rc, err = d.GetCharacter(u, name)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if rc.Name != name || rc.UserId != u {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
 		}
 	}
@@ -401,20 +500,228 @@ func TestChangeMain(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		assertError(t, err, "Character with name test3 was not found", database.CharacterNotFound, n)
+		if e := assertError(t, err, "Character with name test3 was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatal(e)
+		}
 	}
 }
 
-func assertError(t *testing.T, e error, message string, code database.ErrorCode, dbn string) {
+func TestSetStat(t *testing.T) {
+	for n, d := range testable {
+		u, name := uuid.New(), "test"
+
+		rc, err := d.SetCharacterStat(u, name, "a", "b")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
+		}
+		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatal(e)
+		}
+
+		c := &database.Character{
+			Name:   name,
+			UserId: u,
+		}
+		d.AddCharacter(c)
+
+		current := make(map[string]interface{})
+
+		rc, err = d.GetCharacter(u, name)
+		if rc.Body != nil && !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		current["t1"] = "str"
+		rc, err = d.SetCharacterStat(u, name, "t1", "str")
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		current["t2"] = 5
+		rc, err = d.SetCharacterStat(u, name, "t2", 5)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		current["t1"] = 10
+		rc, err = d.SetCharacterStat(u, name, "t1", 10)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		current["t2"] = "str2"
+		rc, err = d.SetCharacterStat(u, name, "t2", "str2")
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		rc, err = d.GetCharacter(u, name)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+	}
+}
+
+func TestRemoveStat(t *testing.T) {
+	for n, d := range testable {
+		u, name := uuid.New(), "test"
+
+		rc, err := d.RemoveCharacterStat(u, name, "a")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
+		}
+		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatal(e)
+		}
+
+		c := &database.Character{
+			Name:   name,
+			UserId: u,
+		}
+		d.AddCharacter(c)
+
+		current := make(map[string]interface{})
+
+		rc, err = d.SetCharacterStat(u, name, "t1", "str")
+		rc, err = d.SetCharacterStat(u, name, "t2", 5)
+		current["t1"] = 10
+		rc, err = d.SetCharacterStat(u, name, "t1", 10)
+		current["t2"] = "str2"
+		rc, err = d.SetCharacterStat(u, name, "t2", "str2")
+
+		rc, err = d.RemoveCharacterStat(u, name, "a")
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		delete(current, "t1")
+		rc, err = d.RemoveCharacterStat(u, name, "t1")
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		rc, err = d.GetCharacter(u, name)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		delete(current, "t2")
+		rc, err = d.RemoveCharacterStat(u, name, "t2")
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		rc, err = d.RemoveCharacterStat(u, name, "t3")
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+
+		rc, err = d.GetCharacter(u, name)
+		if err != nil {
+			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		}
+		if !reflect.DeepEqual(rc.Body, current) {
+			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+	}
+}
+
+func TestRemove(t *testing.T) {
+	for n, d := range testable {
+		u, name, name2 := uuid.New(), "test", "test2"
+
+		rc, err := d.RemoveCharacter(u, name)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected adding character. Received: %v", n, err)
+		}
+		if rc != nil {
+			t.Fatalf("[%v] No character expected. Actual: %v", n, rc)
+		}
+
+		c := &database.Character{
+			Name:   name,
+			UserId: u,
+		}
+		rc, err = d.AddCharacter(c)
+
+		c2 := &database.Character{
+			Name:   name2,
+			UserId: u,
+		}
+		rc, err = d.AddCharacter(c2)
+
+		rc, err = d.RemoveCharacter(u, name)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rc.Name != c.Name || rc.UserId != c.UserId {
+			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+
+		rcs, err := d.GetCharacters(u)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if len(rcs) != 1 {
+			t.Fatalf("[%v] Wrong character count. Actual: %v, expected: %v", n, rcs, 1)
+		}
+		if rcs[0].Name != c2.Name || rcs[0].UserId != c2.UserId {
+			t.Fatalf("[%v] Wrong character is kept. Actual: %v, expected: %v", n, rcs, *c2)
+		}
+
+		rc, err = d.RemoveCharacter(u, name2)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rc.Name != c2.Name || rc.UserId != c2.UserId {
+			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, *rc, *c2)
+		}
+
+		rcs, err = d.GetCharacters(u)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rcs != nil && len(rcs) != 0 {
+			t.Fatalf("[%v] Wrong character count. Actual: %v, expected: %v", n, rcs, 0)
+		}
+	}
+}
+
+func assertError(t *testing.T, e error, message string, code database.ErrorCode, dbn string) string {
 	wish := fmt.Sprintf("Error '%v': %v", code, message)
 	if e.Error() != wish {
-		t.Fatalf("[%v] Wrong error message. Actual: %v, Expected: %v", dbn, e.Error(), wish)
+		return fmt.Sprintf("[%v] Wrong error message. Actual: %v, Expected: %v", dbn, e.Error(), wish)
 	}
-}
 
-/*
-	SetCharacterStat(u uuid.UUID, name string, s string, v interface{}) (*Character, error)
-	ChangeCharacterOwner(old uuid.UUID, name string, u uuid.UUID) (*Character, error)
-	RemoveCharacterStat(u uuid.UUID, name string, s string) (*Character, error)
-	RemoveCharacter(u uuid.UUID, name string) (*Character, error)
-*/
+	return ""
+}

@@ -116,6 +116,9 @@ func (cdb *CharMemoryDb) SetCharacterStat(u uuid.UUID, name string, s string, v 
 		return nil, err
 	}
 
+	if c.Body == nil {
+		c.Body = make(map[string]interface{})
+	}
 	c.Body[s] = v
 	return c, nil
 }
@@ -131,7 +134,7 @@ func (cdb *CharMemoryDb) ChangeCharacterOwner(old uuid.UUID, name string, u uuid
 
 	_, err = cdb.GetCharacter(u, name)
 	if err == nil {
-		return nil, &database.Error{Code: database.UserHasCharacter, Message: "Target user already has character with that name"}
+		return nil, &database.Error{Code: database.UserHasCharacter, Message: fmt.Sprintf("Target user already has character with name '%v'", name)}
 	}
 
 	c.UserId = u
@@ -146,6 +149,10 @@ func (cdb *CharMemoryDb) RemoveCharacterStat(u uuid.UUID, name string, s string)
 	c, err := cdb.GetCharacter(u, name)
 	if err != nil {
 		return nil, err
+	}
+
+	if c.Body == nil {
+		return c, nil
 	}
 
 	delete(c.Body, s)
