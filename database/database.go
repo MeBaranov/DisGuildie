@@ -106,6 +106,7 @@ const (
 	ConnectionError
 	InvalidGuildDefinition
 	InvalidDatabaseState
+	GuildAlreadyRegistered
 	SubguildNameTaken
 	GuildNotFound
 	StatNameConflict

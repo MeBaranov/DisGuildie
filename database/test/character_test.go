@@ -1,4 +1,4 @@
-package memory_test
+package database_test
 
 import (
 	"fmt"
@@ -8,15 +8,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/mebaranov/disguildie/database"
-	"github.com/mebaranov/disguildie/database/memory"
 )
 
-// Here we should test character DB
-var testable map[string]database.DataProvider = map[string]database.DataProvider{
-	"memory": memory.NewMemoryDb(),
-}
-
-func TestAdd(t *testing.T) {
+func TestCharAdd(t *testing.T) {
 	for n, d := range testable {
 		id := uuid.New()
 
@@ -55,7 +49,7 @@ func TestAdd(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
-		if e := assertError(t, err, fmt.Sprintf("User already has character with name %v", c.Name), database.CharacterNameTaken, n); e != "" {
+		if e := assertError(err, fmt.Sprintf("User already has character with name %v", c.Name), database.CharacterNameTaken, n); e != "" {
 			t.Fatalf(e)
 		}
 
@@ -74,7 +68,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestCharGet(t *testing.T) {
 	for n, d := range testable {
 		u, name := uuid.New(), "test"
 
@@ -82,7 +76,7 @@ func TestGet(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
 			t.Fatalf(e)
 		}
 
@@ -104,7 +98,7 @@ func TestGet(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with name test2 was not found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "Character with name test2 was not found", database.CharacterNotFound, n); e != "" {
 			t.Fatalf(e)
 		}
 
@@ -112,13 +106,13 @@ func TestGet(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
 			t.Fatalf(e)
 		}
 	}
 }
 
-func TestGetMain(t *testing.T) {
+func TestCharGetMain(t *testing.T) {
 	for n, d := range testable {
 		u, name := uuid.New(), "test"
 
@@ -126,7 +120,7 @@ func TestGetMain(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "No Characters found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "No Characters found", database.CharacterNotFound, n); e != "" {
 			t.Fatal(e)
 		}
 
@@ -175,7 +169,7 @@ func TestGetMain(t *testing.T) {
 	}
 }
 
-func TestGetNameless(t *testing.T) {
+func TestCharGetNameless(t *testing.T) {
 	for n, d := range testable {
 		u, name := uuid.New(), "test"
 
@@ -183,7 +177,7 @@ func TestGetNameless(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "No Characters found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "No Characters found", database.CharacterNotFound, n); e != "" {
 			t.Fatal(e)
 		}
 
@@ -232,7 +226,7 @@ func TestGetNameless(t *testing.T) {
 	}
 }
 
-func TestGets(t *testing.T) {
+func TestCharGets(t *testing.T) {
 	for n, d := range testable {
 		u, name := uuid.New(), "test"
 
@@ -304,7 +298,7 @@ func TestGets(t *testing.T) {
 	}
 }
 
-func TestRename(t *testing.T) {
+func TestCharRename(t *testing.T) {
 	for n, d := range testable {
 		u, name := uuid.New(), "test"
 
@@ -334,7 +328,7 @@ func TestRename(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
 			t.Fatal(e)
 		}
 
@@ -348,7 +342,7 @@ func TestRename(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with that name already exists", database.CharacterNameTaken, n); e != "" {
+		if e := assertError(err, "Character with that name already exists", database.CharacterNameTaken, n); e != "" {
 			t.Fatal(e)
 		}
 
@@ -384,7 +378,7 @@ func TestRename(t *testing.T) {
 	}
 }
 
-func TestChangeOwner(t *testing.T) {
+func TestCharChangeOwner(t *testing.T) {
 	for n, d := range testable {
 		u, name, u2 := uuid.New(), "test", uuid.New()
 
@@ -392,7 +386,7 @@ func TestChangeOwner(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
 			t.Fatal(e)
 		}
 
@@ -430,7 +424,7 @@ func TestChangeOwner(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
 			t.Fatal(e)
 		}
 
@@ -444,7 +438,7 @@ func TestChangeOwner(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Target user already has character with name 'test'", database.UserHasCharacter, n); e != "" {
+		if e := assertError(err, "Target user already has character with name 'test'", database.UserHasCharacter, n); e != "" {
 			t.Fatal(e)
 		}
 
@@ -466,7 +460,7 @@ func TestChangeOwner(t *testing.T) {
 	}
 }
 
-func TestChangeMain(t *testing.T) {
+func TestCharChangeMain(t *testing.T) {
 	for n, d := range testable {
 		u, name := uuid.New(), "test"
 
@@ -500,13 +494,13 @@ func TestChangeMain(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with name test3 was not found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "Character with name test3 was not found", database.CharacterNotFound, n); e != "" {
 			t.Fatal(e)
 		}
 	}
 }
 
-func TestSetStat(t *testing.T) {
+func TestCharSetStat(t *testing.T) {
 	for n, d := range testable {
 		u, name := uuid.New(), "test"
 
@@ -514,7 +508,7 @@ func TestSetStat(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
 			t.Fatal(e)
 		}
 
@@ -577,7 +571,7 @@ func TestSetStat(t *testing.T) {
 	}
 }
 
-func TestRemoveStat(t *testing.T) {
+func TestCharRemoveStat(t *testing.T) {
 	for n, d := range testable {
 		u, name := uuid.New(), "test"
 
@@ -585,7 +579,7 @@ func TestRemoveStat(t *testing.T) {
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
-		if e := assertError(t, err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
 			t.Fatal(e)
 		}
 
@@ -656,7 +650,7 @@ func TestRemoveStat(t *testing.T) {
 	}
 }
 
-func TestRemove(t *testing.T) {
+func TestCharRemove(t *testing.T) {
 	for n, d := range testable {
 		u, name, name2 := uuid.New(), "test", "test2"
 
@@ -715,13 +709,4 @@ func TestRemove(t *testing.T) {
 			t.Fatalf("[%v] Wrong character count. Actual: %v, expected: %v", n, rcs, 0)
 		}
 	}
-}
-
-func assertError(t *testing.T, e error, message string, code database.ErrorCode, dbn string) string {
-	wish := fmt.Sprintf("Error '%v': %v", code, message)
-	if e.Error() != wish {
-		return fmt.Sprintf("[%v] Wrong error message. Actual: %v, Expected: %v", dbn, e.Error(), wish)
-	}
-
-	return ""
 }

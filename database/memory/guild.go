@@ -19,10 +19,8 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, error) {
 	gdb.mux.Lock()
 	defer gdb.mux.Unlock()
 	if g.DiscordId != "" {
-		if guild, ok := gdb.guildsD[g.DiscordId]; ok {
-			guild.Name = g.Name
-			guild.Stats = g.Stats
-			return guild, nil
+		if _, ok := gdb.guildsD[g.DiscordId]; ok {
+			return nil, &database.Error{Code: database.GuildAlreadyRegistered, Message: fmt.Sprintf("Guild '%v' is already registered", g.DiscordId)}
 		}
 	} else {
 		p, ok := gdb.guilds[g.ParentId]
@@ -42,9 +40,12 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, error) {
 		}
 
 		if _, ok := p.ChildNames[g.Name]; ok {
-			return nil, &database.Error{Code: database.SubguildNameTaken, Message: "Sub-Guild name already taken"}
+			return nil, &database.Error{Code: database.SubguildNameTaken, Message: fmt.Sprintf("Sub-Guild name '%v' is already taken", g.Name)}
 		}
 
+		if p.ChildNames == nil {
+			p.ChildNames = make(map[string]database.Void)
+		}
 		p.ChildNames[g.Name] = database.Member
 	}
 
@@ -92,9 +93,13 @@ func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild
 	}
 
 	if _, ok := p.ChildNames[name]; ok {
-		return nil, &database.Error{Code: database.SubguildNameTaken, Message: "Sub-Guild name already taken"}
+		return nil, &database.Error{Code: database.SubguildNameTaken, Message: fmt.Sprintf("Sub-Guild name '%v' is already taken", name)}
 	}
 
+	// This is sanity check. Should never happen. Never ever
+	if p.ChildNames == nil {
+		p.ChildNames = make(map[string]database.Void)
+	}
 	delete(p.ChildNames, guild.Name)
 	guild.Name = name
 	p.ChildNames[name] = database.Member
@@ -119,6 +124,9 @@ func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, n string, t string) (*databa
 		}
 	}
 
+	if guild.Stats == nil {
+		guild.Stats = make(map[string]string)
+	}
 	guild.Stats[n] = t
 	return guild, nil
 }
@@ -132,7 +140,9 @@ func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guil
 		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
 	}
 
-	delete(guild.Stats, n)
+	if guild.Stats != nil {
+		delete(guild.Stats, n)
+	}
 	return guild, nil
 }
 
