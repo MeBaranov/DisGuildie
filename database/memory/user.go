@@ -9,34 +9,32 @@ import (
 )
 
 type UserMemoryDb struct {
-	users  map[uuid.UUID]*database.User
 	usersD map[string]*database.User
 	mux    sync.Mutex
 }
 
-func (udb *UserMemoryDb) AddUser(u *database.User) (*database.User, error) {
+func (udb *UserMemoryDb) AddUser(u *database.User, g uuid.UUID, p int) (*database.User, error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
 	if user, ok := udb.usersD[u.DiscordId]; ok {
-		for val := range u.GuildIds {
-			if _, e := user.GuildIds[val]; !e {
-				user.GuildIds[val] = database.Member
-			}
+		if _, ok = user.Guilds[g]; !ok {
+			user.Guilds[g] = p
+			return user, nil
 		}
 
-		return user, nil
+		return nil, &database.Error{Code: database.UserAlreadyInGuild, Message: "The user is already registered in the guild"}
 	}
 
 	uid := uuid.New()
 	u.UserId = uid
-	udb.users[uid] = u
+	u.Guilds = map[uuid.UUID]int{g: p}
 	udb.usersD[u.DiscordId] = u
 
 	return u, nil
 }
 
-func (udb *UserMemoryDb) GetUser(d string, g uuid.UUID) (*database.User, error) {
+func (udb *UserMemoryDb) GetUserD(d string) (*database.User, error) {
 	if user, ok := udb.usersD[d]; ok {
 		return user, nil
 	}
@@ -44,41 +42,44 @@ func (udb *UserMemoryDb) GetUser(d string, g uuid.UUID) (*database.User, error) 
 	return nil, &database.Error{Code: database.UserNotFound, Message: "User was not found"}
 }
 
-func (udb *UserMemoryDb) SetUserPermissions(u uuid.UUID, p int) (*database.User, error) {
-	if user, ok := udb.users[u]; ok {
-		user.Permissions = p
-		return user, nil
+func (udb *UserMemoryDb) SetUserPermissions(u string, g uuid.UUID, p int) (*database.User, error) {
+	user, err := udb.GetUserD(u)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, &database.Error{Code: database.UserNotFound, Message: "User was not found"}
+	if _, ok := user.Guilds[g]; !ok {
+		return nil, &database.Error{Code: database.UserNotInGuild, Message: "User is not registered in the guild"}
+	}
+
+	user.Guilds[g] = p
+	return user, nil
 }
 
-func (udb *UserMemoryDb) RemoveUser(u uuid.UUID) (*database.User, error) {
-	udb.mux.Lock()
-	defer udb.mux.Unlock()
-
-	user, ok := udb.users[u]
-	if !ok {
-		return nil, nil
+func (udb *UserMemoryDb) RemoveUserD(u string, g uuid.UUID) (*database.User, error) {
+	user, err := udb.GetUserD(u)
+	if err != nil {
+		return nil, err
 	}
 
-	delete(udb.users, u)
-	delete(udb.usersD, user.DiscordId)
+	if _, ok := user.Guilds[g]; !ok {
+		return nil, &database.Error{Code: database.UserNotInGuild, Message: "User is not registered in the guild"}
+	}
+
+	delete(user.Guilds, g)
 
 	return user, nil
 }
 
-func (udb *UserMemoryDb) RemoveUserD(d string) (*database.User, error) {
+func (udb *UserMemoryDb) EraseUserD(u string) (*database.User, error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
-	user, ok := udb.usersD[d]
-	if !ok {
-		return nil, nil
+	user, err := udb.GetUserD(u)
+	if err != nil {
+		return nil, err
 	}
 
-	delete(udb.users, user.UserId)
-	delete(udb.usersD, d)
-
+	delete(udb.usersD, u)
 	return user, nil
 }

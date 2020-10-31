@@ -22,10 +22,9 @@ type Guild struct {
 }
 
 type User struct {
-	UserId      uuid.UUID
-	DiscordId   string
-	GuildIds    map[uuid.UUID]Void
-	Permissions int
+	UserId    uuid.UUID
+	DiscordId string
+	Guilds    map[uuid.UUID]int
 }
 
 type Character struct {
@@ -59,11 +58,11 @@ type DataProvider interface {
 	RemoveGuild(g uuid.UUID) (*Guild, error)
 	RemoveGuildD(d string) (*Guild, error)
 
-	AddUser(u *User) (*User, error)
-	GetUser(d string, g uuid.UUID) (*User, error)
-	SetUserPermissions(u uuid.UUID, p int) (*User, error)
-	RemoveUser(u uuid.UUID) (*User, error)
-	RemoveUserD(d string) (*User, error)
+	AddUser(u *User, g uuid.UUID, p int) (*User, error)
+	GetUserD(d string) (*User, error)
+	SetUserPermissions(u string, g uuid.UUID, p int) (*User, error)
+	RemoveUserD(d string, g uuid.UUID) (*User, error)
+	EraseUserD(d string) (*User, error)
 
 	AddCharacter(c *Character) (*Character, error)
 	GetCharacters(u uuid.UUID) ([]*Character, error)
@@ -83,8 +82,8 @@ type DataProvider interface {
 	RemoveRole(g string, r string) (*Role, error)
 
 	AddMoney(m *Money) (*Money, error)
-	GetMoneyGuid(g string) (*Money, error)
-	ChangeGuildOwner(g string, u string) (*Money, error)
+	GetMoney(g string) (*Money, error)
+	ChangeMoneyOwner(g string, u string) (*Money, error)
 	SetMoneyValid(g string, t time.Time) (*Money, error)
 
 	Export() ([]byte, error)
@@ -103,14 +102,20 @@ func (e *Error) Error() string {
 
 const (
 	_ = iota
-	ConnectionError
+	ExternalError
+	ConnectionErroruser
 	InvalidGuildDefinition
 	InvalidDatabaseState
 	GuildAlreadyRegistered
 	SubguildNameTaken
 	GuildNotFound
+	GuildLevelError
 	StatNameConflict
+	StatNotFound
 	UserNotFound
+	UserNotInGuild
+	UserAlreadyInGuild
+	WrongUserInput
 	NoMainCharacterSpecified
 	CharacterNotFound
 	CharacterNameTaken

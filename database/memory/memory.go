@@ -25,7 +25,6 @@ func NewMemoryDb() *MemoryDB {
 	m.guildsD = make(map[string]*database.Guild)
 	m.money = make(map[string]*database.Money)
 	m.roles = make(map[string]*database.Role)
-	m.users = make(map[uuid.UUID]*database.User)
 	m.usersD = make(map[string]*database.User)
 	return &m
 }

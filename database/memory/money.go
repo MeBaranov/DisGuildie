@@ -24,14 +24,14 @@ func (mdb *MoneyMemoryDb) AddMoney(m *database.Money) (*database.Money, error) {
 	return m, nil
 }
 
-func (mdb *MoneyMemoryDb) GetMoneyGuid(g string) (*database.Money, error) {
+func (mdb *MoneyMemoryDb) GetMoney(g string) (*database.Money, error) {
 	if m, ok := mdb.money[g]; ok {
 		return m, nil
 	}
 	return nil, &database.Error{Code: database.MoneyNotFound, Message: "Payment stuff for the guild is not found"}
 }
 
-func (mdb *MoneyMemoryDb) ChangeGuildOwner(g string, u string) (*database.Money, error) {
+func (mdb *MoneyMemoryDb) ChangeMoneyOwner(g string, u string) (*database.Money, error) {
 	m, ok := mdb.money[g]
 
 	if !ok {

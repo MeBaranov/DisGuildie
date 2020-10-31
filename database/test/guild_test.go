@@ -125,8 +125,8 @@ func TestGuildAdd(t *testing.T) {
 func TestGuildGet(t *testing.T) {
 	for n, d := range testable {
 		g := &database.Guild{
-			Name:      "test",
-			DiscordId: "did1",
+			Name:      "test22",
+			DiscordId: "did122",
 		}
 		rc1, err := d.AddGuild(g)
 
@@ -174,8 +174,8 @@ func TestGuildGet(t *testing.T) {
 func TestGuildGetD(t *testing.T) {
 	for n, d := range testable {
 		g := &database.Guild{
-			Name:      "test",
-			DiscordId: "did1",
+			Name:      "test33",
+			DiscordId: "did133",
 		}
 		rc1, err := d.AddGuild(g)
 
@@ -194,7 +194,7 @@ func TestGuildGetD(t *testing.T) {
 		names := make(map[string]database.Void)
 		names["sub1-test1"] = database.Member
 		names["sub2-test1"] = database.Member
-		g, err = d.GetGuildD("did1")
+		g, err = d.GetGuildD("did133")
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
@@ -202,7 +202,7 @@ func TestGuildGetD(t *testing.T) {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v, with child names: %v", n, g, rc1, names)
 		}
 
-		rce, err := d.GetGuildD("did2")
+		rce, err := d.GetGuildD("did233")
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rce)
 		}
@@ -216,7 +216,7 @@ func TestGuildRename(t *testing.T) {
 	for n, d := range testable {
 		g := &database.Guild{
 			Name:      "test",
-			DiscordId: "did1",
+			DiscordId: "did144",
 		}
 		rc1, err := d.AddGuild(g)
 
@@ -264,226 +264,342 @@ func TestGuildRename(t *testing.T) {
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Name != "test" || rc.DiscordId != "did1" || !reflect.DeepEqual(rc.ChildNames, names) {
+		if rc.Name != "test" || rc.DiscordId != "did144" || !reflect.DeepEqual(rc.ChildNames, names) {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v, with child names: %v", n, g, rc1, names)
 		}
 	}
 }
 
-func TestGuildSetStat(t *testing.T) {
+func TestGuildAddStat(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g := &database.Guild{
+			Name:      "test",
+			DiscordId: "did155",
+		}
+		rc1, _ := d.AddGuild(g)
 
-		rc, err := d.SetCharacterStat(u, name, "a", "b")
+		g = &database.Guild{
+			Name:     "sub1-test1",
+			ParentId: rc1.GuildId,
+		}
+		rc2, _ := d.AddGuild(g)
+
+		g, err := d.AddGuildStat(rc2.GuildId, "s1", "t1")
 		if err == nil {
-			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
 		}
-		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
-			t.Fatal(e)
-		}
-
-		c := &database.Character{
-			Name:   name,
-			UserId: u,
-		}
-		d.AddCharacter(c)
-
-		current := make(map[string]interface{})
-
-		rc, err = d.GetCharacter(u, name)
-		if rc.Body != nil && !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		if e := assertError(err, "Only top-level guild stats are supported right now", database.GuildLevelError, n); e != "" {
+			t.Fatalf(e)
 		}
 
-		current["t1"] = "str"
-		rc, err = d.SetCharacterStat(u, name, "t1", "str")
+		g, err = d.AddGuildStat(uuid.New(), "s1", "t1")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		stats := map[string]string{"s1": "t1"}
+
+		g, err = d.AddGuildStat(rc1.GuildId, "s1", "t1")
 		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
-		}
-
-		current["t2"] = 5
-		rc, err = d.SetCharacterStat(u, name, "t2", 5)
-		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
-		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		if !reflect.DeepEqual(g.Stats, stats) {
+			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
 		}
 
-		current["t1"] = 10
-		rc, err = d.SetCharacterStat(u, name, "t1", 10)
+		g, err = d.AddGuildStat(rc1.GuildId, "s1", "t1")
 		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		if !reflect.DeepEqual(g.Stats, stats) {
+			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
 		}
 
-		current["t2"] = "str2"
-		rc, err = d.SetCharacterStat(u, name, "t2", "str2")
-		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+		g, err = d.AddGuildStat(rc1.GuildId, "s1", "t2")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
 		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		if e := assertError(err, "Stat with same name (s1) but different type (t1) found", database.StatNameConflict, n); e != "" {
+			t.Fatalf(e)
 		}
 
-		rc, err = d.GetCharacter(u, name)
+		stats["s2"] = "t2"
+		g, err = d.AddGuildStat(rc1.GuildId, "s2", "t2")
 		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		if !reflect.DeepEqual(g.Stats, stats) {
+			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
+		}
+
+		g, err = d.GetGuild(rc1.GuildId)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if !reflect.DeepEqual(g.Stats, stats) {
+			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
 		}
 	}
 }
 
 func TestGuildRemoveStat(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g := &database.Guild{
+			Name:      "test",
+			DiscordId: "did166",
+		}
+		rc1, _ := d.AddGuild(g)
 
-		rc, err := d.RemoveCharacterStat(u, name, "a")
+		g = &database.Guild{
+			Name:     "sub1-test1",
+			ParentId: rc1.GuildId,
+		}
+		rc2, _ := d.AddGuild(g)
+
+		g, err := d.RemoveGuildStat(rc2.GuildId, "s2")
 		if err == nil {
-			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
 		}
-		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
-			t.Fatal(e)
+		if e := assertError(err, "Only top-level guild stats are supported right now", database.GuildLevelError, n); e != "" {
+			t.Fatalf(e)
 		}
 
-		c := &database.Character{
-			Name:   name,
-			UserId: u,
+		g, err = d.RemoveGuildStat(uuid.New(), "s2")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
 		}
-		d.AddCharacter(c)
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
 
-		current := make(map[string]interface{})
+		g, err = d.RemoveGuildStat(rc1.GuildId, "s2")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Stat was not found", database.StatNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
 
-		rc, err = d.SetCharacterStat(u, name, "t1", "str")
-		rc, err = d.SetCharacterStat(u, name, "t2", 5)
-		current["t1"] = 10
-		rc, err = d.SetCharacterStat(u, name, "t1", 10)
-		current["t2"] = "str2"
-		rc, err = d.SetCharacterStat(u, name, "t2", "str2")
+		d.AddGuildStat(rc1.GuildId, "s1", "t1")
+		g, err = d.RemoveGuildStat(rc1.GuildId, "s2")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Stat was not found", database.StatNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
 
-		rc, err = d.RemoveCharacterStat(u, name, "a")
+		stats := map[string]string{"s1": "t1"}
+		d.AddGuildStat(rc1.GuildId, "s2", "t2")
+		g, err = d.RemoveGuildStat(rc1.GuildId, "s2")
 		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
-		}
-
-		delete(current, "t1")
-		rc, err = d.RemoveCharacterStat(u, name, "t1")
-		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
-		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		if !reflect.DeepEqual(g.Stats, stats) {
+			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
 		}
 
-		rc, err = d.GetCharacter(u, name)
+		delete(stats, "s1")
+		g, err = d.RemoveGuildStat(rc1.GuildId, "s1")
 		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		if g.Stats != nil && !reflect.DeepEqual(g.Stats, stats) {
+			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
 		}
 
-		delete(current, "t2")
-		rc, err = d.RemoveCharacterStat(u, name, "t2")
+		g, err = d.GetGuild(rc1.GuildId)
 		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
-		}
-
-		rc, err = d.RemoveCharacterStat(u, name, "t3")
-		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
-		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
-		}
-
-		rc, err = d.GetCharacter(u, name)
-		if err != nil {
-			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
-		}
-		if !reflect.DeepEqual(rc.Body, current) {
-			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		if g.Stats != nil && !reflect.DeepEqual(g.Stats, stats) {
+			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
 		}
 	}
 }
 
 func TestGuildRemove(t *testing.T) {
 	for n, d := range testable {
-		u, name, name2 := uuid.New(), "test", "test2"
+		g := &database.Guild{
+			Name:      "test",
+			DiscordId: "did177",
+		}
+		rc1, err := d.AddGuild(g)
 
-		rc, err := d.RemoveCharacter(u, name)
-		if err != nil {
-			t.Fatalf("[%v] No errors expected adding character. Received: %v", n, err)
+		g = &database.Guild{
+			Name:     "sub1-test1",
+			ParentId: rc1.GuildId,
 		}
-		if rc != nil {
-			t.Fatalf("[%v] No character expected. Actual: %v", n, rc)
-		}
+		rc2, err := d.AddGuild(g)
 
-		c := &database.Character{
-			Name:   name,
-			UserId: u,
+		g = &database.Guild{
+			Name:     "sub2-test1",
+			ParentId: rc2.GuildId,
 		}
-		rc, err = d.AddCharacter(c)
+		rc3, err := d.AddGuild(g)
 
-		c2 := &database.Character{
-			Name:   name2,
-			UserId: u,
+		g, err = d.RemoveGuild(uuid.New())
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
 		}
-		rc, err = d.AddCharacter(c2)
-
-		rc, err = d.RemoveCharacter(u, name)
-		if err != nil {
-			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
-		}
-		if rc.Name != c.Name || rc.UserId != c.UserId {
-			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, rc, c)
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
 		}
 
-		rcs, err := d.GetCharacters(u)
+		g, err = d.RemoveGuild(rc3.GuildId)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if len(rcs) != 1 {
-			t.Fatalf("[%v] Wrong character count. Actual: %v, expected: %v", n, rcs, 1)
-		}
-		if rcs[0].Name != c2.Name || rcs[0].UserId != c2.UserId {
-			t.Fatalf("[%v] Wrong character is kept. Actual: %v, expected: %v", n, rcs, *c2)
+		if g.GuildId != rc3.GuildId || g.Name != rc3.Name {
+			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v", n, g, rc3)
 		}
 
-		rc, err = d.RemoveCharacter(u, name2)
+		g = &database.Guild{
+			Name:     "sub2-test1",
+			ParentId: rc2.GuildId,
+		}
+		rc3, err = d.AddGuild(g)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Name != c2.Name || rc.UserId != c2.UserId {
-			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, *rc, *c2)
-		}
 
-		rcs, err = d.GetCharacters(u)
+		g, err = d.RemoveGuild(rc2.GuildId)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rcs != nil && len(rcs) != 0 {
-			t.Fatalf("[%v] Wrong character count. Actual: %v, expected: %v", n, rcs, 0)
+		if g.GuildId != rc2.GuildId || g.Name != rc2.Name {
+			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v", n, g, rc2)
+		}
+
+		_, err = d.GetGuild(rc2.GuildId)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		_, err = d.GetGuild(rc3.GuildId)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		g, err = d.GetGuild(rc1.GuildId)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if g.GuildId != rc1.GuildId || g.Name != rc1.Name {
+			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v", n, g, rc1)
+		}
+
+		g = &database.Guild{
+			Name:     "sub1-test1",
+			ParentId: rc1.GuildId,
+		}
+		rc2, err = d.AddGuild(g)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+
+		g = &database.Guild{
+			Name:     "sub2-test1",
+			ParentId: rc2.GuildId,
+		}
+		rc3, err = d.AddGuild(g)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+
+		g, err = d.RemoveGuild(rc1.GuildId)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if g.GuildId != rc1.GuildId || g.Name != rc1.Name {
+			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v", n, g, rc1)
+		}
+
+		_, err = d.GetGuild(rc3.GuildId)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
 		}
 	}
 }
 
-/*
-	AddGuildStat(g uuid.UUID, n string, t string) (*Guild, error)
-	RemoveGuildStat(g uuid.UUID, n string) (*Guild, error)
-	RemoveGuild(g uuid.UUID) (*Guild, error)
-	RemoveGuildD(d string) (*Guild, error)
-*/
+func TestGuildRemoveD(t *testing.T) {
+	for n, d := range testable {
+		g := &database.Guild{
+			Name:      "test",
+			DiscordId: "did18",
+		}
+		rc1, err := d.AddGuild(g)
+
+		g = &database.Guild{
+			Name:     "sub1-test1",
+			ParentId: rc1.GuildId,
+		}
+		rc2, err := d.AddGuild(g)
+
+		g = &database.Guild{
+			Name:     "sub2-test1",
+			ParentId: rc2.GuildId,
+		}
+		rc3, err := d.AddGuild(g)
+
+		g, err = d.RemoveGuildD("unknown did")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		g, err = d.RemoveGuildD(rc2.Name)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		g, err = d.RemoveGuildD(rc1.DiscordId)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if g.GuildId != rc1.GuildId || g.Name != rc1.Name {
+			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v", n, g, rc1)
+		}
+
+		_, err = d.GetGuild(rc1.GuildId)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		_, err = d.GetGuild(rc2.GuildId)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		_, err = d.GetGuild(rc3.GuildId)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+	}
+}
