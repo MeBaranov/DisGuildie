@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mebaranov/disguildie/database"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -56,4 +58,34 @@ func sendMonitored(s *discordgo.Session, c *string, msg *string) {
 
 func SendMonitored(s *discordgo.Session, c *string, msg *string) {
 	go sendMonitored(s, c, msg)
+}
+
+func GetPermissions(s *discordgo.Session, mc *discordgo.MessageCreate, prov database.DataProvider) (int, error) {
+	gld, err := s.Guild(mc.GuildID)
+	if err != nil {
+		return 0, err
+	}
+
+	if mc.Member.User.ID == gld.OwnerID {
+		return database.FullPermissions, nil
+	}
+
+	m, err := prov.GetMoney(mc.GuildID)
+	if err != nil {
+		return 0, err
+	}
+
+	if m.UserId == mc.Member.User.ID {
+		return database.FullPermissions, nil
+	}
+
+	u, err := prov.GetUserD(mc.Member.User.ID)
+	if err != nil {
+		return 0, err
+	}
+	if gp, ok := u.Guilds[mc.GuildID]; ok {
+		return gp.Permissions, nil
+	}
+
+	return 0, &database.Error{Code: database.UserNotInGuild, Message: "User is not registered in this guild"}
 }

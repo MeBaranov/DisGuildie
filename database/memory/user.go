@@ -13,13 +13,13 @@ type UserMemoryDb struct {
 	mux    sync.Mutex
 }
 
-func (udb *UserMemoryDb) AddUser(u *database.User, g uuid.UUID, p int) (*database.User, error) {
+func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission) (*database.User, error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
 	if user, ok := udb.usersD[u.DiscordId]; ok {
-		if _, ok = user.Guilds[g]; !ok {
-			user.Guilds[g] = p
+		if _, ok = user.Guilds[gp.TopGuild]; !ok {
+			user.Guilds[gp.TopGuild] = gp
 			return user, nil
 		}
 
@@ -28,7 +28,7 @@ func (udb *UserMemoryDb) AddUser(u *database.User, g uuid.UUID, p int) (*databas
 
 	uid := uuid.New()
 	u.UserId = uid
-	u.Guilds = map[uuid.UUID]int{g: p}
+	u.Guilds = map[string]*database.GuildPermission{gp.TopGuild: gp}
 	udb.usersD[u.DiscordId] = u
 
 	return u, nil
@@ -42,21 +42,37 @@ func (udb *UserMemoryDb) GetUserD(d string) (*database.User, error) {
 	return nil, &database.Error{Code: database.UserNotFound, Message: "User was not found"}
 }
 
-func (udb *UserMemoryDb) SetUserPermissions(u string, g uuid.UUID, p int) (*database.User, error) {
+func (udb *UserMemoryDb) SetUserPermissions(u string, gp *database.GuildPermission) (*database.User, error) {
 	user, err := udb.GetUserD(u)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := user.Guilds[g]; !ok {
+	curGp, ok := user.Guilds[gp.TopGuild]
+	if !ok {
 		return nil, &database.Error{Code: database.UserNotInGuild, Message: "User is not registered in the guild"}
 	}
 
-	user.Guilds[g] = p
+	curGp.Permissions = gp.Permissions
 	return user, nil
 }
 
-func (udb *UserMemoryDb) RemoveUserD(u string, g uuid.UUID) (*database.User, error) {
+func (udb *UserMemoryDb) SetUserSubGuild(u string, gp *database.GuildPermission) (*database.User, error) {
+	user, err := udb.GetUserD(u)
+	if err != nil {
+		return nil, err
+	}
+
+	curGp, ok := user.Guilds[gp.TopGuild]
+	if !ok {
+		return nil, &database.Error{Code: database.UserNotInGuild, Message: "User is not registered in the guild"}
+	}
+
+	curGp.GuildId = gp.GuildId
+	return user, nil
+}
+
+func (udb *UserMemoryDb) RemoveUserD(u string, g string) (*database.User, error) {
 	user, err := udb.GetUserD(u)
 	if err != nil {
 		return nil, err

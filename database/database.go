@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Void struct{}
+type Void interface{}
 
 var Member Void
 
@@ -21,10 +21,16 @@ type Guild struct {
 	ChildNames       map[string]Void
 }
 
+type GuildPermission struct {
+	TopGuild    string
+	GuildId     uuid.UUID
+	Permissions int
+}
+
 type User struct {
 	UserId    uuid.UUID
 	DiscordId string
-	Guilds    map[uuid.UUID]int
+	Guilds    map[string]*GuildPermission
 }
 
 type Character struct {
@@ -58,10 +64,11 @@ type DataProvider interface {
 	RemoveGuild(g uuid.UUID) (*Guild, error)
 	RemoveGuildD(d string) (*Guild, error)
 
-	AddUser(u *User, g uuid.UUID, p int) (*User, error)
+	AddUser(u *User, g *GuildPermission) (*User, error)
 	GetUserD(d string) (*User, error)
-	SetUserPermissions(u string, g uuid.UUID, p int) (*User, error)
-	RemoveUserD(d string, g uuid.UUID) (*User, error)
+	SetUserPermissions(u string, g *GuildPermission) (*User, error)
+	SetUserSubGuild(u string, g *GuildPermission) (*User, error)
+	RemoveUserD(d string, g string) (*User, error)
 	EraseUserD(d string) (*User, error)
 
 	AddCharacter(c *Character) (*Character, error)
@@ -124,4 +131,20 @@ const (
 	RoleNotFound
 	MoneyAlreadyRegistered
 	MoneyNotFound
+)
+
+const (
+	SubPerm              = 0b00
+	EditSubCharsPerm     = 0b01
+	EditSubStructurePerm = 0b10
+
+	OneUpPerm              = 0x0000b
+	EditOneUpCharsPerm     = 0x0100b
+	EditOneUpStructurePerm = 0x1000b
+
+	GuildPerm              = 0x000000b
+	EditGuildCharsPerm     = 0x010000b
+	EditGuildStructurePerm = 0x100000b
+
+	FullPermissions = 0x111111b
 )
