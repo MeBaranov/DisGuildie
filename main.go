@@ -8,9 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mebaranov/disguildie/database"
+	"github.com/mebaranov/disguildie/database/memory"
+
 	"github.com/bwmarrin/discordgo"
 
 	"github.com/mebaranov/disguildie/processor"
+	"github.com/mebaranov/disguildie/processor/helpers"
 	"github.com/mebaranov/disguildie/utility"
 )
 
@@ -26,7 +30,8 @@ var intents = [...]discordgo.Intent{
 }
 
 var readyChannel chan bool = make(chan bool)
-var messageProcessor processor.MessageProcessor
+var messageProcessor helpers.MessageProcessor
+var dataProvider database.DataProvider
 
 func main() {
 	token, err := setUp()
@@ -85,6 +90,8 @@ func main() {
 func setUp() (token string, err error) {
 	err = nil
 	flag.StringVar(&token, "t", "", "Bot Token")
+	var superUser string
+	flag.StringVar(&superUser, "su", "", "Super User")
 	flag.Parse()
 
 	if token == "" {
@@ -94,8 +101,10 @@ func setUp() (token string, err error) {
 			err = errors.New("No token provided. Please run this app with \"-t <bot token>\" or with BOT_TOKEN environment variable set")
 		}
 	}
+	utility.SuperUserID = superUser
 
-	messageProcessor = &processor.Processor{}
+	dataProvider = memory.NewMemoryDb()
+	messageProcessor = processor.New(dataProvider)
 
 	return
 }
@@ -105,12 +114,10 @@ func ready(s *discordgo.Session, r *discordgo.Ready) {
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID || !strings.HasPrefix(m.Content, "!g") {
+	if m.Author.ID == s.State.User.ID || !strings.HasPrefix(m.Content, "!g") || m.Author.Bot {
 		return
 	}
 
-	fmt.Println("Content:", m.Content)
-	fmt.Println("Message:", m.Mentions)
 	_, msg := utility.NextCommand(&(m.Content))
-	messageProcessor.ProcessMessage(s, &(m.ChannelID), &msg, m)
+	messageProcessor.ProcessMessage(s, &msg, m)
 }

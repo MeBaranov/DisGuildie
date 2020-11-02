@@ -146,5 +146,7 @@ const (
 	EditGuildCharsPerm     = 0x010000b
 	EditGuildStructurePerm = 0x100000b
 
-	FullPermissions = 0x111111b
+	FullPermissions      = 0x111111b
+	StructurePermissions = EditSubStructurePerm | EditOneUpStructurePerm | EditGuildStructurePerm
+	CharsPermissions     = EditSubCharsPerm | EditOneUpCharsPerm | EditGuildCharsPerm
 )

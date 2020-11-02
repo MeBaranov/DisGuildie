@@ -33,7 +33,7 @@ func (proc *Processor) ProcessMessage(s *discordgo.Session, m *string, mc *disco
 
 	f, ok := proc.funcs[cmd]
 	if !ok {
-		rv := fmt.Sprintf("Unknown command \"%v\". Send \"!g help\" or \"!g h\" for help", mc.Message)
+		rv := fmt.Sprintf("Unknown command \"%v\". Send \"!g help\" or \"!g h\" for help", mc.Message.Content)
 		go utility.SendMonitored(s, &mc.ChannelID, &rv)
 		return
 	}
@@ -52,7 +52,7 @@ func (proc *Processor) help(s *discordgo.Session, _ *string, mc *discordgo.Messa
 	}
 
 	if p > 0 {
-		rv += "\t-- \"!g admin\" - for administrative actions"
+		rv += "\t-- \"!g admin\" (\"!g a\") - administrative actions"
 	}
 
 	go utility.SendMonitored(s, &mc.ChannelID, &rv)

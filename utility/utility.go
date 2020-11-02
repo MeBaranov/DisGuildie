@@ -14,6 +14,8 @@ const delay = 50 * time.Millisecond
 const longDelay = 1 * time.Second
 const limit = 5
 
+var SuperUserID = ""
+
 func NextCommand(in *string) (cmd string, obj string) {
 	pos := strings.IndexByte(*in, ' ')
 	if pos < 0 {
@@ -30,6 +32,7 @@ func NextCommand(in *string) (cmd string, obj string) {
 func sendMonitored(s *discordgo.Session, c *string, msg *string) {
 	if len(*msg) < charLimit {
 		s.ChannelMessageSend(*c, *msg)
+		return
 	}
 	split := strings.Split(*msg, "\n")
 	l, count, cur := 0, 0, ""
@@ -66,7 +69,8 @@ func GetPermissions(s *discordgo.Session, mc *discordgo.MessageCreate, prov data
 		return 0, err
 	}
 
-	if mc.Member.User.ID == gld.OwnerID {
+	uid := mc.Message.Author.ID
+	if uid == gld.OwnerID || uid == SuperUserID {
 		return database.FullPermissions, nil
 	}
 
@@ -75,11 +79,11 @@ func GetPermissions(s *discordgo.Session, mc *discordgo.MessageCreate, prov data
 		return 0, err
 	}
 
-	if m.UserId == mc.Member.User.ID {
+	if m.UserId == uid {
 		return database.FullPermissions, nil
 	}
 
-	u, err := prov.GetUserD(mc.Member.User.ID)
+	u, err := prov.GetUserD(uid)
 	if err != nil {
 		return 0, err
 	}
