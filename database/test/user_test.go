@@ -139,6 +139,64 @@ func TestUserGetD(t *testing.T) {
 	}
 }
 
+func TestUserGetInGuild(t *testing.T) {
+	for n, d := range testable {
+		u := &database.User{
+			DiscordId: "TestUserGetInGuild_udid",
+		}
+		perm := &database.GuildPermission{TopGuild: "TestUserGetInGuild_gdid", GuildId: uuid.New(), Permissions: 10}
+		perm2 := &database.GuildPermission{TopGuild: "TestUserGetInGuild_gdid2", GuildId: uuid.New(), Permissions: 11}
+
+		rcs, err := d.GetUsersInGuild("TestUserGetInGuild_gdid")
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rcs != nil && len(rcs) != 0 {
+			t.Fatalf("[%v] Wrong amount of users returned. Received: %v, expected: %v", n, len(rcs), 0)
+		}
+
+		d.AddUser(u, perm)
+
+		rcs, err = d.GetUsersInGuild(perm.TopGuild)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rcs != nil && len(rcs) != 1 {
+			t.Fatalf("[%v] Wrong amount of users returned. Received: %v, expected: %v", n, len(rcs), 1)
+		}
+
+		d.AddUser(u, perm2)
+
+		rcs, err = d.GetUsersInGuild(perm2.TopGuild)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rcs != nil && len(rcs) != 1 {
+			t.Fatalf("[%v] Wrong amount of users returned. Received: %v, expected: %v", n, len(rcs), 1)
+		}
+
+		u = &database.User{
+			DiscordId: "did22",
+		}
+		d.AddUser(u, perm)
+		rcs, err = d.GetUsersInGuild(perm.TopGuild)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rcs != nil && len(rcs) != 2 {
+			t.Fatalf("[%v] Wrong amount of users returned. Received: %v, expected: %v", n, len(rcs), 2)
+		}
+
+		rcs, err = d.GetUsersInGuild(perm2.TopGuild)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rcs != nil && len(rcs) != 1 {
+			t.Fatalf("[%v] Wrong amount of users returned. Received: %v, expected: %v", n, len(rcs), 1)
+		}
+	}
+}
+
 func TestUserSetPermissions(t *testing.T) {
 	for n, d := range testable {
 		u := &database.User{

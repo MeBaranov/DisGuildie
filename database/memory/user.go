@@ -42,6 +42,20 @@ func (udb *UserMemoryDb) GetUserD(d string) (*database.User, error) {
 	return nil, &database.Error{Code: database.UserNotFound, Message: "User was not found"}
 }
 
+func (udb *UserMemoryDb) GetUsersInGuild(d string) ([]*database.User, error) {
+	udb.mux.Lock()
+	defer udb.mux.Unlock()
+
+	rv := make([]*database.User, 0, 100)
+	for _, u := range udb.usersD {
+		if _, ok := u.Guilds[d]; ok {
+			rv = append(rv, u)
+		}
+	}
+
+	return rv, nil
+}
+
 func (udb *UserMemoryDb) SetUserPermissions(u string, gp *database.GuildPermission) (*database.User, error) {
 	user, err := udb.GetUserD(u)
 	if err != nil {

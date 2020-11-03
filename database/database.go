@@ -66,6 +66,7 @@ type DataProvider interface {
 
 	AddUser(u *User, g *GuildPermission) (*User, error)
 	GetUserD(d string) (*User, error)
+	GetUsersInGuild(d string) ([]*User, error)
 	SetUserPermissions(u string, g *GuildPermission) (*User, error)
 	SetUserSubGuild(u string, g *GuildPermission) (*User, error)
 	RemoveUserD(d string, g string) (*User, error)

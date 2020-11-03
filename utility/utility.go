@@ -1,6 +1,7 @@
 package utility
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -92,4 +93,12 @@ func GetPermissions(s *discordgo.Session, mc *discordgo.MessageCreate, prov data
 	}
 
 	return 0, &database.Error{Code: database.UserNotInGuild, Message: "User is not registered in this guild"}
+}
+
+func ParseUserMention(m string) (string, error) {
+	if len(m) < 4 || m[0] != '<' || m[1] != '@' || m[2] != '!' || m[len(m)-1] != '>' {
+		return "", errors.New("Wrong format for user name")
+	}
+
+	return m[3 : len(m)-1], nil
 }

@@ -38,15 +38,158 @@ func (ap *AdminUserProcessor) ProcessMessage(s *discordgo.Session, m *string, mc
 }
 
 func (ap *AdminUserProcessor) register(s *discordgo.Session, m *string, mc *discordgo.MessageCreate) {
-	rv := "Oh my, what do I do now?\n"
-	rv += "Somehow parse this: ```" + *m + "```"
-	fmt.Println("Message: ", *m)
-	rv += "With this: " + fmt.Sprintln(mc.Mentions)
-	if len(mc.Mentions) > 0 {
-		rv += "\t" + fmt.Sprintln(mc.Mentions[0])
+	perm, err := utility.GetPermissions(s, mc, ap.prov)
+	if err != nil {
+		rv := "Some error happened while getting permissions: " + err.Error()
+		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		return
+	}
+
+	if perm&database.CharsPermissions == 0 {
+		rv := "I'm sorry, but you don't have permissions to register users"
+		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		return
+	}
+
+	u, extra := utility.NextCommand(m)
+
+	if extra != "" {
+		rv := "Unknown extended parameter: \"" + extra + "\".\nWhy did you add it?"
+		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		return
+	}
+
+	if u == "all" {
+		if perm&database.EditGuildCharsPerm == 0 {
+			rv := "I'm sorry, but you don't have permissions to run guild-wide user management operations"
+			go utility.SendMonitored(s, &mc.ChannelID, &rv)
+			return
+		}
+
+		ap.syncAllUsers(s, mc, false)
+		return
+	}
+
+	if len(mc.Message.Mentions) != 1 {
+		rv := "Wrong command format. You should mention user for registration"
+		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		return
+	}
+
+	uid, err := utility.ParseUserMention(u)
+	if err != nil {
+		rv := "Error: " + err.Error()
+		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		return
+	}
+
+	if uid != mc.Message.Mentions[0].ID {
+		rv := "Error: You're doing something tricky. Mention is inconsistent. Try again, please"
+		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		return
+	}
+
+	guild, err := ap.prov.GetGuildD(mc.GuildID)
+	if err != nil {
+		rv := "Error: " + err.Error()
+		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		return
+	}
+
+	dbu := &database.User{
+		DiscordId: uid,
+	}
+	dbgp := &database.GuildPermission{
+		Permissions: 0,
+		GuildId:     guild.GuildId,
+		TopGuild:    guild.DiscordId,
+	}
+	dbu, err = ap.prov.AddUser(dbu, dbgp)
+	if err != nil {
+		rv := "Error: " + err.Error()
+		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		return
+	}
+
+	rv := "User <@!" + uid + "> successfully registered"
+	go utility.SendMonitored(s, &mc.ChannelID, &rv)
+}
+
+func (ap *AdminUserProcessor) syncAllUsers(s *discordgo.Session, mc *discordgo.MessageCreate, delete bool) {
+	guild, err := ap.prov.GetGuildD(mc.GuildID)
+	if err != nil {
+		rv := "Error: " + err.Error()
+		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		return
+	}
+
+	guildies := make(map[string]string)
+
+	cur := ""
+	for count := 1000; count == 100; {
+		gld, err := s.GuildMembers(mc.GuildID, cur, 1000)
+		if err != nil {
+			rv := "Error getting guild memebers: " + err.Error()
+			go utility.SendMonitored(s, &mc.ChannelID, &rv)
+			return
+		}
+
+		count = len(gld)
+		for _, m := range gld {
+			guildies[m.User.ID] = m.Nick
+		}
+	}
+
+	rv := ""
+
+	if delete {
+		tmp, err := ap.deleteSyncAllUsers(guildies)
+		if err != nil {
+			rv := "Error getting guild memebers: " + err.Error()
+			go utility.SendMonitored(s, &mc.ChannelID, &rv)
+			return
+		}
+
+		rv += tmp + "\n"
+	}
+
+	rv += "Users registered:\n"
+	for id, nick := range guildies {
+		dbu, err := ap.prov.GetUserD(id)
+		if err == nil {
+			continue
+		} else if (err.(*database.Error)).Code != database.UserNotFound {
+			rv += "\nError while adding users. Error: \n" + err.Error() + "\nPlease, run the command again to retry"
+			go utility.SendMonitored(s, &mc.ChannelID, &rv)
+			return
+		}
+
+		dbu = &database.User{
+			DiscordId: id,
+		}
+
+		// TODO: add roles processing here too
+
+		dbgp := &database.GuildPermission{
+			Permissions: 0,
+			GuildId:     guild.GuildId,
+			TopGuild:    guild.DiscordId,
+		}
+
+		dbu, err = ap.prov.AddUser(dbu, dbgp)
+		if err != nil {
+			rv += "\nError while adding users. Error: \n" + err.Error() + "\nPlease, run the command again to retry"
+			go utility.SendMonitored(s, &mc.ChannelID, &rv)
+			return
+		}
+		rv += nick + ", "
 	}
 
 	go utility.SendMonitored(s, &mc.ChannelID, &rv)
+}
+
+func (ap *AdminUserProcessor) deleteSyncAllUsers(guildies map[string]string) (string, error) {
+	return "", nil
 }
 
 func (ap *AdminUserProcessor) help(s *discordgo.Session, _ *string, mc *discordgo.MessageCreate) {
