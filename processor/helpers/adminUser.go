@@ -89,7 +89,7 @@ func (ap *AdminUserProcessor) register(s *discordgo.Session, m *string, mc *disc
 		return
 	}
 
-	guild, err := ap.prov.GetGuildD(mc.GuildID)
+	guild, err := ap.prov.GetGuildD(mc.Message.GuildID)
 	if err != nil {
 		rv := "Error: " + err.Error()
 		go utility.SendMonitored(s, &mc.ChannelID, &rv)
@@ -158,7 +158,7 @@ func (ap *AdminUserProcessor) syncAllUsers(s *discordgo.Session, mc *discordgo.M
 		dbu, err := ap.prov.GetUserD(id)
 		if err == nil {
 			continue
-		} else if (err.(*database.Error)).Code != database.UserNotFound {
+		} else if err.Code != database.UserNotFound {
 			rv += "\nError while adding users. Error: \n" + err.Error() + "\nPlease, run the command again to retry"
 			go utility.SendMonitored(s, &mc.ChannelID, &rv)
 			return
@@ -193,7 +193,7 @@ func (ap *AdminUserProcessor) deleteSyncAllUsers(guildies map[string]string) (st
 }
 
 func (ap *AdminUserProcessor) help(s *discordgo.Session, _ *string, mc *discordgo.MessageCreate) {
-	rv := "Here's a list of user management commands you're allowed to do:\n"
+	rv := "Here's a list of user management commands you're allowed to use:\n"
 
 	perm, err := utility.GetPermissions(s, mc, ap.prov)
 	if err != nil {

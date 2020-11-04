@@ -55,47 +55,47 @@ type Money struct {
 }
 
 type DataProvider interface {
-	AddGuild(g *Guild) (*Guild, error)
-	GetGuild(g uuid.UUID) (*Guild, error)
-	GetGuildD(d string) (*Guild, error)
-	RenameGuild(g uuid.UUID, name string) (*Guild, error)
-	AddGuildStat(g uuid.UUID, n string, t string) (*Guild, error)
-	RemoveGuildStat(g uuid.UUID, n string) (*Guild, error)
-	RemoveGuild(g uuid.UUID) (*Guild, error)
-	RemoveGuildD(d string) (*Guild, error)
+	AddGuild(g *Guild) (*Guild, *Error)
+	GetGuild(g uuid.UUID) (*Guild, *Error)
+	GetGuildD(d string) (*Guild, *Error)
+	RenameGuild(g uuid.UUID, name string) (*Guild, *Error)
+	AddGuildStat(g uuid.UUID, n string, t string) (*Guild, *Error)
+	RemoveGuildStat(g uuid.UUID, n string) (*Guild, *Error)
+	RemoveGuild(g uuid.UUID) (*Guild, *Error)
+	RemoveGuildD(d string) (*Guild, *Error)
 
-	AddUser(u *User, g *GuildPermission) (*User, error)
-	GetUserD(d string) (*User, error)
-	GetUsersInGuild(d string) ([]*User, error)
-	SetUserPermissions(u string, g *GuildPermission) (*User, error)
-	SetUserSubGuild(u string, g *GuildPermission) (*User, error)
-	RemoveUserD(d string, g string) (*User, error)
-	EraseUserD(d string) (*User, error)
+	AddUser(u *User, g *GuildPermission) (*User, *Error)
+	GetUserD(d string) (*User, *Error)
+	GetUsersInGuild(d string) ([]*User, *Error)
+	SetUserPermissions(u string, g *GuildPermission) (*User, *Error)
+	SetUserSubGuild(u string, g *GuildPermission) (*User, *Error)
+	RemoveUserD(d string, g string) (*User, *Error)
+	EraseUserD(d string) (*User, *Error)
 
-	AddCharacter(c *Character) (*Character, error)
-	GetCharacters(u uuid.UUID) ([]*Character, error)
-	GetMainCharacter(u uuid.UUID) (*Character, error)
-	GetCharacter(u uuid.UUID, n string) (*Character, error)
-	RenameCharacter(u uuid.UUID, old string, name string) (*Character, error)
-	ChangeMainCharacter(u uuid.UUID, name string) (*Character, error)
-	SetCharacterStat(u uuid.UUID, name string, s string, v interface{}) (*Character, error)
-	ChangeCharacterOwner(old uuid.UUID, name string, u uuid.UUID) (*Character, error)
-	RemoveCharacterStat(u uuid.UUID, name string, s string) (*Character, error)
-	RemoveCharacter(u uuid.UUID, name string) (*Character, error)
+	AddCharacter(c *Character) (*Character, *Error)
+	GetCharacters(u uuid.UUID) ([]*Character, *Error)
+	GetMainCharacter(u uuid.UUID) (*Character, *Error)
+	GetCharacter(u uuid.UUID, n string) (*Character, *Error)
+	RenameCharacter(u uuid.UUID, old string, name string) (*Character, *Error)
+	ChangeMainCharacter(u uuid.UUID, name string) (*Character, *Error)
+	SetCharacterStat(u uuid.UUID, name string, s string, v interface{}) (*Character, *Error)
+	ChangeCharacterOwner(old uuid.UUID, name string, u uuid.UUID) (*Character, *Error)
+	RemoveCharacterStat(u uuid.UUID, name string, s string) (*Character, *Error)
+	RemoveCharacter(u uuid.UUID, name string) (*Character, *Error)
 
-	AddRole(r *Role) (*Role, error)
-	GetRole(g string, r string) (*Role, error)
-	GetGuildRoles(g string) ([]*Role, error)
-	SetRolePermissions(g string, r string, p int) (*Role, error)
-	RemoveRole(g string, r string) (*Role, error)
+	AddRole(r *Role) (*Role, *Error)
+	GetRole(g string, r string) (*Role, *Error)
+	GetGuildRoles(g string) ([]*Role, *Error)
+	SetRolePermissions(g string, r string, p int) (*Role, *Error)
+	RemoveRole(g string, r string) (*Role, *Error)
 
-	AddMoney(m *Money) (*Money, error)
-	GetMoney(g string) (*Money, error)
-	ChangeMoneyOwner(g string, u string) (*Money, error)
-	SetMoneyValid(g string, t time.Time) (*Money, error)
+	AddMoney(m *Money) (*Money, *Error)
+	GetMoney(g string) (*Money, *Error)
+	ChangeMoneyOwner(g string, u string) (*Money, *Error)
+	SetMoneyValid(g string, t time.Time) (*Money, *Error)
 
-	Export() ([]byte, error)
-	Import(b []byte) error
+	Export() ([]byte, *Error)
+	Import(b []byte) *Error
 }
 
 type ErrorCode int
@@ -132,6 +132,7 @@ const (
 	RoleNotFound
 	MoneyAlreadyRegistered
 	MoneyNotFound
+	IOErrorDuringImport
 )
 
 const (

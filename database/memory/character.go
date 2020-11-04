@@ -14,7 +14,7 @@ type CharMemoryDb struct {
 	mux   sync.Mutex
 }
 
-func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Character, error) {
+func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Character, *database.Error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
@@ -28,7 +28,7 @@ func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Characte
 	return c, nil
 }
 
-func (cdb *CharMemoryDb) GetCharacters(u uuid.UUID) ([]*database.Character, error) {
+func (cdb *CharMemoryDb) GetCharacters(u uuid.UUID) ([]*database.Character, *database.Error) {
 	rv := make([]*database.Character, 0, 10)
 	for _, v := range cdb.chars {
 		if v.UserId == u {
@@ -39,7 +39,7 @@ func (cdb *CharMemoryDb) GetCharacters(u uuid.UUID) ([]*database.Character, erro
 	return rv, nil
 }
 
-func (cdb *CharMemoryDb) GetMainCharacter(u uuid.UUID) (*database.Character, error) {
+func (cdb *CharMemoryDb) GetMainCharacter(u uuid.UUID) (*database.Character, *database.Error) {
 	var rv *database.Character = nil
 	for _, v := range cdb.chars {
 		if v.UserId == u {
@@ -59,7 +59,7 @@ func (cdb *CharMemoryDb) GetMainCharacter(u uuid.UUID) (*database.Character, err
 	return rv, nil
 }
 
-func (cdb *CharMemoryDb) GetCharacter(u uuid.UUID, name string) (*database.Character, error) {
+func (cdb *CharMemoryDb) GetCharacter(u uuid.UUID, name string) (*database.Character, *database.Error) {
 	if name == "" {
 		return cdb.GetMainCharacter(u)
 	}
@@ -72,7 +72,7 @@ func (cdb *CharMemoryDb) GetCharacter(u uuid.UUID, name string) (*database.Chara
 	return nil, &database.Error{Code: database.CharacterNotFound, Message: fmt.Sprintf("Character with name %v was not found", name)}
 }
 
-func (cdb *CharMemoryDb) RenameCharacter(u uuid.UUID, old string, name string) (*database.Character, error) {
+func (cdb *CharMemoryDb) RenameCharacter(u uuid.UUID, old string, name string) (*database.Character, *database.Error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
@@ -94,7 +94,7 @@ func (cdb *CharMemoryDb) RenameCharacter(u uuid.UUID, old string, name string) (
 	return c, nil
 }
 
-func (cdb *CharMemoryDb) ChangeMainCharacter(u uuid.UUID, name string) (*database.Character, error) {
+func (cdb *CharMemoryDb) ChangeMainCharacter(u uuid.UUID, name string) (*database.Character, *database.Error) {
 	c, err := cdb.GetCharacter(u, name)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (cdb *CharMemoryDb) ChangeMainCharacter(u uuid.UUID, name string) (*databas
 	return c, nil
 }
 
-func (cdb *CharMemoryDb) SetCharacterStat(u uuid.UUID, name string, s string, v interface{}) (*database.Character, error) {
+func (cdb *CharMemoryDb) SetCharacterStat(u uuid.UUID, name string, s string, v interface{}) (*database.Character, *database.Error) {
 	c, err := cdb.GetCharacter(u, name)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (cdb *CharMemoryDb) SetCharacterStat(u uuid.UUID, name string, s string, v 
 	return c, nil
 }
 
-func (cdb *CharMemoryDb) ChangeCharacterOwner(old uuid.UUID, name string, u uuid.UUID) (*database.Character, error) {
+func (cdb *CharMemoryDb) ChangeCharacterOwner(old uuid.UUID, name string, u uuid.UUID) (*database.Character, *database.Error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
@@ -145,7 +145,7 @@ func (cdb *CharMemoryDb) ChangeCharacterOwner(old uuid.UUID, name string, u uuid
 	return c, nil
 }
 
-func (cdb *CharMemoryDb) RemoveCharacterStat(u uuid.UUID, name string, s string) (*database.Character, error) {
+func (cdb *CharMemoryDb) RemoveCharacterStat(u uuid.UUID, name string, s string) (*database.Character, *database.Error) {
 	c, err := cdb.GetCharacter(u, name)
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func (cdb *CharMemoryDb) RemoveCharacterStat(u uuid.UUID, name string, s string)
 	return c, nil
 }
 
-func (cdb *CharMemoryDb) RemoveCharacter(u uuid.UUID, name string) (*database.Character, error) {
+func (cdb *CharMemoryDb) RemoveCharacter(u uuid.UUID, name string) (*database.Character, *database.Error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 

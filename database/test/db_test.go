@@ -11,10 +11,9 @@ var testable map[string]database.DataProvider = map[string]database.DataProvider
 	"memory": memory.NewMemoryDb(),
 }
 
-func assertError(e error, message string, code database.ErrorCode, dbn string) string {
-	wish := fmt.Sprintf("Error '%v': %v", code, message)
-	if e.Error() != wish {
-		return fmt.Sprintf("[%v] Wrong error message. Actual: %v, Expected: %v", dbn, e.Error(), wish)
+func assertError(e *database.Error, message string, code database.ErrorCode, dbn string) string {
+	if e.Code != code || e.Message != message {
+		return fmt.Sprintf("[%v] Wrong error message. Actual: [%v, %v], Expected: [%v, %v]", dbn, e.Code, e.Message, code, message)
 	}
 
 	return ""

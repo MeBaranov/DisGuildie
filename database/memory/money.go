@@ -12,7 +12,7 @@ type MoneyMemoryDb struct {
 	mux   sync.Mutex
 }
 
-func (mdb *MoneyMemoryDb) AddMoney(m *database.Money) (*database.Money, error) {
+func (mdb *MoneyMemoryDb) AddMoney(m *database.Money) (*database.Money, *database.Error) {
 	mdb.mux.Lock()
 	defer mdb.mux.Unlock()
 
@@ -24,14 +24,14 @@ func (mdb *MoneyMemoryDb) AddMoney(m *database.Money) (*database.Money, error) {
 	return m, nil
 }
 
-func (mdb *MoneyMemoryDb) GetMoney(g string) (*database.Money, error) {
+func (mdb *MoneyMemoryDb) GetMoney(g string) (*database.Money, *database.Error) {
 	if m, ok := mdb.money[g]; ok {
 		return m, nil
 	}
 	return nil, &database.Error{Code: database.MoneyNotFound, Message: "Payment stuff for the guild is not found"}
 }
 
-func (mdb *MoneyMemoryDb) ChangeMoneyOwner(g string, u string) (*database.Money, error) {
+func (mdb *MoneyMemoryDb) ChangeMoneyOwner(g string, u string) (*database.Money, *database.Error) {
 	m, ok := mdb.money[g]
 
 	if !ok {
@@ -42,7 +42,7 @@ func (mdb *MoneyMemoryDb) ChangeMoneyOwner(g string, u string) (*database.Money,
 	return m, nil
 }
 
-func (mdb *MoneyMemoryDb) SetMoneyValid(g string, t time.Time) (*database.Money, error) {
+func (mdb *MoneyMemoryDb) SetMoneyValid(g string, t time.Time) (*database.Money, *database.Error) {
 	m, ok := mdb.money[g]
 
 	if !ok {

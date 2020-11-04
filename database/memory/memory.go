@@ -29,7 +29,7 @@ func NewMemoryDb() *MemoryDB {
 	return &m
 }
 
-func (m *MemoryDB) Export() ([]byte, error) {
+func (m *MemoryDB) Export() ([]byte, *database.Error) {
 	var buf bytes.Buffer
 	encoder := gob.NewEncoder(io.Writer(&buf))
 	encoder.Encode(m)
@@ -37,12 +37,12 @@ func (m *MemoryDB) Export() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (m *MemoryDB) Import(b []byte) error {
+func (m *MemoryDB) Import(b []byte) *database.Error {
 	buf := bytes.NewBuffer(b)
 	decoder := gob.NewDecoder(io.Reader(buf))
 	err := decoder.Decode(m)
 
-	return err
+	return &database.Error{Code: database.IOErrorDuringImport, Message: err.Error()}
 }
 
 func init() {

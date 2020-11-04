@@ -41,7 +41,7 @@ func (ap *AdminProcessor) ProcessMessage(s *discordgo.Session, m *string, mc *di
 }
 
 func (ap *AdminProcessor) help(s *discordgo.Session, _ *string, mc *discordgo.MessageCreate) {
-	rv := "Here's a list of administrative commands you're allowed to do:\n"
+	rv := "Here's a list of administrative commands you're allowed to use:\n"
 
 	perm, err := utility.GetPermissions(s, mc, ap.prov)
 	if err != nil {

@@ -13,7 +13,7 @@ type UserMemoryDb struct {
 	mux    sync.Mutex
 }
 
-func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission) (*database.User, error) {
+func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission) (*database.User, *database.Error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
@@ -34,7 +34,7 @@ func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission)
 	return u, nil
 }
 
-func (udb *UserMemoryDb) GetUserD(d string) (*database.User, error) {
+func (udb *UserMemoryDb) GetUserD(d string) (*database.User, *database.Error) {
 	if user, ok := udb.usersD[d]; ok {
 		return user, nil
 	}
@@ -42,7 +42,7 @@ func (udb *UserMemoryDb) GetUserD(d string) (*database.User, error) {
 	return nil, &database.Error{Code: database.UserNotFound, Message: "User was not found"}
 }
 
-func (udb *UserMemoryDb) GetUsersInGuild(d string) ([]*database.User, error) {
+func (udb *UserMemoryDb) GetUsersInGuild(d string) ([]*database.User, *database.Error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
@@ -56,7 +56,7 @@ func (udb *UserMemoryDb) GetUsersInGuild(d string) ([]*database.User, error) {
 	return rv, nil
 }
 
-func (udb *UserMemoryDb) SetUserPermissions(u string, gp *database.GuildPermission) (*database.User, error) {
+func (udb *UserMemoryDb) SetUserPermissions(u string, gp *database.GuildPermission) (*database.User, *database.Error) {
 	user, err := udb.GetUserD(u)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (udb *UserMemoryDb) SetUserPermissions(u string, gp *database.GuildPermissi
 	return user, nil
 }
 
-func (udb *UserMemoryDb) SetUserSubGuild(u string, gp *database.GuildPermission) (*database.User, error) {
+func (udb *UserMemoryDb) SetUserSubGuild(u string, gp *database.GuildPermission) (*database.User, *database.Error) {
 	user, err := udb.GetUserD(u)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (udb *UserMemoryDb) SetUserSubGuild(u string, gp *database.GuildPermission)
 	return user, nil
 }
 
-func (udb *UserMemoryDb) RemoveUserD(u string, g string) (*database.User, error) {
+func (udb *UserMemoryDb) RemoveUserD(u string, g string) (*database.User, *database.Error) {
 	user, err := udb.GetUserD(u)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (udb *UserMemoryDb) RemoveUserD(u string, g string) (*database.User, error)
 	return user, nil
 }
 
-func (udb *UserMemoryDb) EraseUserD(u string) (*database.User, error) {
+func (udb *UserMemoryDb) EraseUserD(u string) (*database.User, *database.Error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
