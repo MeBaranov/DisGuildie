@@ -89,9 +89,9 @@ func (ap *AdminUserProcessor) register(s *discordgo.Session, m *string, mc *disc
 		return
 	}
 
-	guild, err := ap.prov.GetGuildD(mc.Message.GuildID)
-	if err != nil {
-		rv := "Error: " + err.Error()
+	guild, dbErr := ap.prov.GetGuildD(mc.Message.GuildID)
+	if dbErr != nil {
+		rv := "Error: " + dbErr.Error()
 		go utility.SendMonitored(s, &mc.ChannelID, &rv)
 		return
 	}
@@ -104,9 +104,9 @@ func (ap *AdminUserProcessor) register(s *discordgo.Session, m *string, mc *disc
 		GuildId:     guild.GuildId,
 		TopGuild:    guild.DiscordId,
 	}
-	dbu, err = ap.prov.AddUser(dbu, dbgp)
-	if err != nil {
-		rv := "Error: " + err.Error()
+	dbu, dbErr = ap.prov.AddUser(dbu, dbgp)
+	if dbErr != nil {
+		rv := "Error: " + dbErr.Error()
 		go utility.SendMonitored(s, &mc.ChannelID, &rv)
 		return
 	}

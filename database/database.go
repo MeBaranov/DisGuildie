@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -105,7 +104,7 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return fmt.Sprintf("Error '%v': %v", e.Code, e.Message)
+	return e.Message
 }
 
 const (
