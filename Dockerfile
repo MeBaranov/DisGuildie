@@ -1,4 +1,4 @@
-FROM alpine
+FROM ubuntu
 ARG token
 COPY disguildie /app/disguildie
 RUN apk add --no-cache libc6-compat
