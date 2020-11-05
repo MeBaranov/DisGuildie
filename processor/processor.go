@@ -42,6 +42,7 @@ func New(prov database.DataProvider, token string, intent *discordgo.Intent, tim
 	fmt.Println("Bot created successfully")
 	s.AddHandler(proc.ready)
 	s.AddHandler(proc.messageCreate)
+	// TODO: Add GuildCreate handler
 
 	err = s.Open()
 	if err != nil {
