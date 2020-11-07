@@ -9,13 +9,13 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"github.com/mebaranov/disguildie/database"
+	"github.com/mebaranov/disguildie/message"
 	"github.com/mebaranov/disguildie/processor/helpers"
-	"github.com/mebaranov/disguildie/utility"
 )
 
 type Processor struct {
 	provider database.DataProvider
-	funcs    map[string]func(*discordgo.Session, *string, *discordgo.MessageCreate)
+	funcs    map[string]func(message.Message)
 	s        *discordgo.Session
 	rc       chan bool
 }
@@ -24,7 +24,7 @@ func New(prov database.DataProvider, token string, intent *discordgo.Intent, tim
 	admin := helpers.NewAdminProcessor(prov)
 	proc := &Processor{provider: prov, rc: make(chan bool)}
 
-	proc.funcs = map[string]func(*discordgo.Session, *string, *discordgo.MessageCreate){
+	proc.funcs = map[string]func(message.Message){
 		"help":  proc.help,
 		"h":     proc.help,
 		"admin": admin.ProcessMessage,
@@ -68,26 +68,26 @@ func (proc *Processor) Close() {
 	proc.s.Close()
 }
 
-func (proc *Processor) processMessage(s *discordgo.Session, m *string, mc *discordgo.MessageCreate) {
-	cmd, obj := utility.NextCommand(m)
+func (proc *Processor) processMessage(m message.Message) {
+	cmd := m.CurSegment()
 
 	f, ok := proc.funcs[cmd]
 	if !ok {
-		rv := fmt.Sprintf("Unknown command \"%v\". Send \"!g help\" or \"!g h\" for help", mc.Message.Content)
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		rv := fmt.Sprintf("Unknown command \"%v\". Send \"!g help\" or \"!g h\" for help", m.FullMessage())
+		go m.SendMessage(&rv)
 		return
 	}
 
-	f(s, &obj, mc)
+	f(m)
 }
 
-func (proc *Processor) help(s *discordgo.Session, _ *string, mc *discordgo.MessageCreate) {
+func (proc *Processor) help(m message.Message) {
 	rv := "Here is a list of commands you are allowed to use:\n"
 
-	p, err := utility.GetPermissions(s, mc, proc.provider)
+	p, err := m.AuthorPermissions()
 	if err != nil {
 		rv += "Could not get your permissions. Error:\n" + err.Error()
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
@@ -95,7 +95,7 @@ func (proc *Processor) help(s *discordgo.Session, _ *string, mc *discordgo.Messa
 		rv += "\t-- \"!g admin\" (\"!g a\") - administrative actions"
 	}
 
-	go utility.SendMonitored(s, &mc.ChannelID, &rv)
+	go m.SendMessage(&rv)
 }
 
 func (proc *Processor) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -103,8 +103,10 @@ func (proc *Processor) messageCreate(s *discordgo.Session, m *discordgo.MessageC
 		return
 	}
 
-	_, msg := utility.NextCommand(&(m.Content))
-	proc.processMessage(s, &msg, m)
+	msg := message.New(s, m, proc.provider)
+	msg.CurSegment()
+
+	proc.processMessage(msg)
 }
 
 func (proc *Processor) ready(s *discordgo.Session, r *discordgo.Ready) {

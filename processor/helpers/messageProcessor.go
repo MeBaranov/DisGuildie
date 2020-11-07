@@ -1,7 +1,7 @@
 package helpers
 
-import "github.com/bwmarrin/discordgo"
+import "github.com/mebaranov/disguildie/message"
 
 type MessageProcessor interface {
-	ProcessMessage(s *discordgo.Session, m *string, mc *discordgo.MessageCreate)
+	ProcessMessage(m message.Message)
 }

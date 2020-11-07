@@ -64,13 +64,13 @@ func SendMonitored(s *discordgo.Session, c *string, msg *string) {
 	go sendMonitored(s, c, msg)
 }
 
-func GetPermissions(s *discordgo.Session, mc *discordgo.MessageCreate, prov database.DataProvider) (int, error) {
+func GetPermissions(s *discordgo.Session, mc *discordgo.Message, prov database.DataProvider) (int, error) {
 	gld, err := s.Guild(mc.GuildID)
 	if err != nil {
 		return 0, err
 	}
 
-	uid := mc.Message.Author.ID
+	uid := mc.Author.ID
 	if uid == gld.OwnerID || uid == SuperUserID {
 		return database.FullPermissions, nil
 	}

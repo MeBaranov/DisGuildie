@@ -3,19 +3,19 @@ package helpers
 import (
 	"fmt"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/mebaranov/disguildie/database"
+	"github.com/mebaranov/disguildie/message"
 	"github.com/mebaranov/disguildie/utility"
 )
 
 type AdminUserProcessor struct {
 	prov  database.DataProvider
-	funcs map[string]func(*discordgo.Session, *string, *discordgo.MessageCreate)
+	funcs map[string]func(message.Message)
 }
 
 func NewAdminUserProcessor(prov database.DataProvider) MessageProcessor {
 	ap := &AdminUserProcessor{prov: prov}
-	ap.funcs = map[string]func(*discordgo.Session, *string, *discordgo.MessageCreate){
+	ap.funcs = map[string]func(message.Message){
 		"h":        ap.help,
 		"help":     ap.help,
 		"r":        ap.register,
@@ -24,75 +24,75 @@ func NewAdminUserProcessor(prov database.DataProvider) MessageProcessor {
 	return ap
 }
 
-func (ap *AdminUserProcessor) ProcessMessage(s *discordgo.Session, m *string, mc *discordgo.MessageCreate) {
-	cmd, obj := utility.NextCommand(m)
+func (ap *AdminUserProcessor) ProcessMessage(m message.Message) {
+	cmd := m.CurSegment()
 
 	f, ok := ap.funcs[cmd]
 	if !ok {
-		rv := fmt.Sprintf("Unknown user administration command \"%v\". Send \"!g admin user help\" or \"!g a u h\" for help", mc.Message.Content)
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		rv := fmt.Sprintf("Unknown user administration command \"%v\". Send \"!g admin user help\" or \"!g a u h\" for help", m.FullMessage())
+		go m.SendMessage(&rv)
 		return
 	}
 
-	f(s, &obj, mc)
+	f(m)
 }
 
-func (ap *AdminUserProcessor) register(s *discordgo.Session, m *string, mc *discordgo.MessageCreate) {
-	perm, err := utility.GetPermissions(s, mc, ap.prov)
+func (ap *AdminUserProcessor) register(m message.Message) {
+	perm, err := m.AuthorPermissions()
 	if err != nil {
 		rv := "Some error happened while getting permissions: " + err.Error()
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
 	if perm&database.CharsPermissions == 0 {
 		rv := "I'm sorry, but you don't have permissions to register users"
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
-	u, extra := utility.NextCommand(m)
+	u := m.CurSegment()
 
-	if extra != "" {
-		rv := "Unknown extended parameter: \"" + extra + "\".\nWhy did you add it?"
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+	if m.MoreSegments() {
+		rv := "Unknown extended parameter: \"" + m.CurSegment() + "\".\nWhy did you add it?"
+		go m.SendMessage(&rv)
 		return
 	}
 
 	if u == "all" {
 		if perm&database.EditGuildCharsPerm == 0 {
 			rv := "I'm sorry, but you don't have permissions to run guild-wide user management operations"
-			go utility.SendMonitored(s, &mc.ChannelID, &rv)
+			go m.SendMessage(&rv)
 			return
 		}
 
-		ap.syncAllUsers(s, mc, false)
+		ap.syncAllUsers(m, false)
 		return
 	}
 
-	if len(mc.Message.Mentions) != 1 {
+	if len(m.Mentions()) != 1 {
 		rv := "Wrong command format. You should mention user for registration"
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
 	uid, err := utility.ParseUserMention(u)
 	if err != nil {
 		rv := "Error: " + err.Error()
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
-	if uid != mc.Message.Mentions[0].ID {
+	if uid != m.Mentions()[0] {
 		rv := "Error: You're doing something tricky. Mention is inconsistent. Try again, please"
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
-	guild, dbErr := ap.prov.GetGuildD(mc.Message.GuildID)
+	guild, dbErr := ap.prov.GetGuildD(m.GuildId())
 	if dbErr != nil {
 		rv := "Error: " + dbErr.Error()
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
@@ -107,37 +107,27 @@ func (ap *AdminUserProcessor) register(s *discordgo.Session, m *string, mc *disc
 	dbu, dbErr = ap.prov.AddUser(dbu, dbgp)
 	if dbErr != nil {
 		rv := "Error: " + dbErr.Error()
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
 	rv := "User <@!" + uid + "> successfully registered"
-	go utility.SendMonitored(s, &mc.ChannelID, &rv)
+	go m.SendMessage(&rv)
 }
 
-func (ap *AdminUserProcessor) syncAllUsers(s *discordgo.Session, mc *discordgo.MessageCreate, delete bool) {
-	guild, err := ap.prov.GetGuildD(mc.GuildID)
-	if err != nil {
-		rv := "Error: " + err.Error()
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+func (ap *AdminUserProcessor) syncAllUsers(m message.Message, delete bool) {
+	guild, dbErr := ap.prov.GetGuildD(m.GuildId())
+	if dbErr != nil {
+		rv := "Error: " + dbErr.Error()
+		go m.SendMessage(&rv)
 		return
 	}
 
-	guildies := make(map[string]string)
-
-	cur := ""
-	for count := 1000; count == 100; {
-		gld, err := s.GuildMembers(mc.GuildID, cur, 1000)
-		if err != nil {
-			rv := "Error getting guild memebers: " + err.Error()
-			go utility.SendMonitored(s, &mc.ChannelID, &rv)
-			return
-		}
-
-		count = len(gld)
-		for _, m := range gld {
-			guildies[m.User.ID] = m.Nick
-		}
+	guildies, err := m.GuildMembers()
+	if err != nil {
+		rv := "Error getting guild memebers: " + err.Error()
+		go m.SendMessage(&rv)
+		return
 	}
 
 	rv := ""
@@ -146,7 +136,7 @@ func (ap *AdminUserProcessor) syncAllUsers(s *discordgo.Session, mc *discordgo.M
 		tmp, err := ap.deleteSyncAllUsers(guildies)
 		if err != nil {
 			rv := "Error getting guild memebers: " + err.Error()
-			go utility.SendMonitored(s, &mc.ChannelID, &rv)
+			go m.SendMessage(&rv)
 			return
 		}
 
@@ -155,12 +145,12 @@ func (ap *AdminUserProcessor) syncAllUsers(s *discordgo.Session, mc *discordgo.M
 
 	rv += "Users registered:\n"
 	for id, nick := range guildies {
-		dbu, err := ap.prov.GetUserD(id)
-		if err == nil {
+		dbu, dbErr := ap.prov.GetUserD(id)
+		if dbErr == nil {
 			continue
-		} else if err.Code != database.UserNotFound {
-			rv += "\nError while adding users. Error: \n" + err.Error() + "\nPlease, run the command again to retry"
-			go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		} else if dbErr.Code != database.UserNotFound {
+			rv += "\nError while adding users. Error: \n" + dbErr.Error() + "\nPlease, run the command again to retry"
+			go m.SendMessage(&rv)
 			return
 		}
 
@@ -176,35 +166,35 @@ func (ap *AdminUserProcessor) syncAllUsers(s *discordgo.Session, mc *discordgo.M
 			TopGuild:    guild.DiscordId,
 		}
 
-		dbu, err = ap.prov.AddUser(dbu, dbgp)
-		if err != nil {
-			rv += "\nError while adding users. Error: \n" + err.Error() + "\nPlease, run the command again to retry"
-			go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		dbu, dbErr = ap.prov.AddUser(dbu, dbgp)
+		if dbErr != nil {
+			rv += "\nError while adding users. Error: \n" + dbErr.Error() + "\nPlease, run the command again to retry"
+			go m.SendMessage(&rv)
 			return
 		}
 		rv += nick + ", "
 	}
 
-	go utility.SendMonitored(s, &mc.ChannelID, &rv)
+	go m.SendMessage(&rv)
 }
 
 func (ap *AdminUserProcessor) deleteSyncAllUsers(guildies map[string]string) (string, error) {
 	return "", nil
 }
 
-func (ap *AdminUserProcessor) help(s *discordgo.Session, _ *string, mc *discordgo.MessageCreate) {
+func (ap *AdminUserProcessor) help(m message.Message) {
 	rv := "Here's a list of user management commands you're allowed to use:\n"
 
-	perm, err := utility.GetPermissions(s, mc, ap.prov)
+	perm, err := m.AuthorPermissions()
 	if err != nil {
 		rv += "Some error happened while getting permissions: " + err.Error()
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
 	if perm&database.CharsPermissions == 0 {
 		rv += "Sorry, none. Ask leaders to let you do more"
-		go utility.SendMonitored(s, &mc.ChannelID, &rv)
+		go m.SendMessage(&rv)
 		return
 	}
 
@@ -220,5 +210,5 @@ func (ap *AdminUserProcessor) help(s *discordgo.Session, _ *string, mc *discordg
 	rv += "\t -- \"!g admin user assign <mention user> <sub-guild name>\" (\"!g a u a <user> <name>\") - Move user to a sub-guild\n"
 	rv += "\t -- \"!g admin user permissions <mention user>\" (\"!g a u p <user>\") - Re-synchronize user roles and permissions\n"
 
-	go utility.SendMonitored(s, &mc.ChannelID, &rv)
+	go m.SendMessage(&rv)
 }
