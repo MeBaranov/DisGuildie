@@ -5,8 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mebaranov/disguildie/database"
-
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -14,8 +12,6 @@ const charLimit = 2000
 const delay = 50 * time.Millisecond
 const longDelay = 1 * time.Second
 const limit = 5
-
-var SuperUserID = ""
 
 func NextCommand(in *string) (cmd string, obj string) {
 	pos := strings.IndexByte(*in, ' ')
@@ -62,37 +58,6 @@ func sendMonitored(s *discordgo.Session, c *string, msg *string) {
 
 func SendMonitored(s *discordgo.Session, c *string, msg *string) {
 	go sendMonitored(s, c, msg)
-}
-
-func GetPermissions(s *discordgo.Session, mc *discordgo.Message, prov database.DataProvider) (int, error) {
-	gld, err := s.Guild(mc.GuildID)
-	if err != nil {
-		return 0, err
-	}
-
-	uid := mc.Author.ID
-	if uid == gld.OwnerID || uid == SuperUserID {
-		return database.FullPermissions, nil
-	}
-
-	m, err := prov.GetMoney(mc.GuildID)
-	if err != nil {
-		return 0, err
-	}
-
-	if m.UserId == uid {
-		return database.FullPermissions, nil
-	}
-
-	u, err := prov.GetUserD(uid)
-	if err != nil {
-		return 0, err
-	}
-	if gp, ok := u.Guilds[mc.GuildID]; ok {
-		return gp.Permissions, nil
-	}
-
-	return 0, &database.Error{Code: database.UserNotInGuild, Message: "User is not registered in this guild"}
 }
 
 func ParseUserMention(m string) (string, error) {

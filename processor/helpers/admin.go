@@ -1,8 +1,6 @@
 package helpers
 
 import (
-	"fmt"
-
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
 )
@@ -30,8 +28,7 @@ func (ap *AdminProcessor) ProcessMessage(m message.Message) {
 
 	f, ok := ap.funcs[cmd]
 	if !ok {
-		rv := fmt.Sprintf("Unknown admin command \"%v\". Send \"!g admin help\" or \"!g a h\" for help", m.FullMessage())
-		go m.SendMessage(&rv)
+		go m.SendMessage("Unknown admin command \"%v\". Send \"!g admin help\" or \"!g a h\" for help", m.FullMessage())
 		return
 	}
 
@@ -43,14 +40,13 @@ func (ap *AdminProcessor) help(m message.Message) {
 
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		rv += "Some error happened while getting permissions: " + err.Error()
-		go m.SendMessage(&rv)
+		go m.SendMessage("Some error happened while getting permissions: %v", err.Error())
 		return
 	}
 
 	if perm == 0 {
 		rv += "Sorry, none. Ask leaders to let you do more"
-		go m.SendMessage(&rv)
+		go m.SendMessage(rv)
 		return
 	}
 
@@ -65,5 +61,5 @@ func (ap *AdminProcessor) help(m message.Message) {
 		rv += "\t-- \"!g admin role\" (\"!g a r\") - roles management\n"
 	}
 
-	go m.SendMessage(&rv)
+	go m.SendMessage(rv)
 }
