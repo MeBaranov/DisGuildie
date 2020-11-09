@@ -127,7 +127,7 @@ func (dgm *DiscordGoMessage) MoreSegments() bool {
 
 func (dgm *DiscordGoMessage) SendMessage(s string, strs ...interface{}) {
 	msg := fmt.Sprintf(s, strs...)
-	utility.SendMonitored(dgm.session, &dgm.orig.ChannelID, &msg)
+	go utility.SendMonitored(dgm.session, &dgm.orig.ChannelID, &msg)
 }
 
 func (dgm *DiscordGoMessage) UserRoles(id string) ([]string, error) {

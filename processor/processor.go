@@ -90,7 +90,7 @@ func (proc *Processor) processMessage(m message.Message) {
 
 	f, ok := proc.funcs[cmd]
 	if !ok {
-		go m.SendMessage("Unknown command \"%v\". Send \"!g help\" or \"!g h\" for help", m.FullMessage())
+		m.SendMessage("Unknown command \"%v\". Send \"!g help\" or \"!g h\" for help", m.FullMessage())
 		return
 	}
 
@@ -103,7 +103,7 @@ func (proc *Processor) help(m message.Message) {
 	p, err := m.AuthorPermissions()
 	if err != nil {
 		rv += "Could not get your permissions. Error:\n" + err.Error()
-		go m.SendMessage(rv)
+		m.SendMessage(rv)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (proc *Processor) help(m message.Message) {
 		rv += "\t-- \"!g admin\" (\"!g a\") - administrative actions"
 	}
 
-	go m.SendMessage(rv)
+	m.SendMessage(rv)
 }
 
 func (proc *Processor) ready(s *discordgo.Session, r *discordgo.Ready) {

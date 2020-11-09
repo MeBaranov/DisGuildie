@@ -212,6 +212,119 @@ func TestGuildGetD(t *testing.T) {
 	}
 }
 
+func TestGuildGetN(t *testing.T) {
+	for n, d := range testable {
+		g := &database.Guild{
+			Name:      "test_getn",
+			DiscordId: "did_getn",
+		}
+		rc1, err := d.AddGuild(g)
+
+		g = &database.Guild{
+			Name:     "sub1-test_getn",
+			ParentId: rc1.GuildId,
+		}
+		rc2, err := d.AddGuild(g)
+
+		g = &database.Guild{
+			Name:     "sub2-test_getn",
+			ParentId: rc2.GuildId,
+		}
+		rc3, err := d.AddGuild(g)
+
+		g, err = d.GetGuildN("did_getn_nonexistent", "sub2-test_getn")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Parent guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		g, err = d.GetGuildN("did_getn", "sub2-test_getn_nonexistent")
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		g, err = d.GetGuildN("did_getn", "sub2-test_getn")
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rc3.Name != g.Name || rc3.GuildId != g.GuildId {
+			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v.", n, g, rc3)
+		}
+
+		g, err = d.GetGuildN("did_getn", "sub1-test_getn")
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if rc2.Name != g.Name || rc2.GuildId != g.GuildId {
+			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v.", n, g, rc2)
+		}
+	}
+}
+
+func TestGuildGetSub(t *testing.T) {
+	for n, d := range testable {
+		g := &database.Guild{
+			Name:      "test_getsub",
+			DiscordId: "did_getsub",
+		}
+		rc1, err := d.AddGuild(g)
+
+		g = &database.Guild{
+			Name:     "sub1-test_getsub",
+			ParentId: rc1.GuildId,
+		}
+		rc2, err := d.AddGuild(g)
+
+		g = &database.Guild{
+			Name:     "sub2-test_getsub",
+			ParentId: rc2.GuildId,
+		}
+		rc3, err := d.AddGuild(g)
+
+		gs, err := d.GetSubGuilds(uuid.New())
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, gs)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		gs, err = d.GetSubGuilds(rc3.GuildId)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if len(gs) != 1 || rc3.Name != gs[rc3.GuildId].Name || rc3.GuildId != gs[rc3.GuildId].GuildId {
+			t.Fatalf("[%v] Wrong guilds returned. Actual: %v, expected: %v.", n, gs, rc3)
+		}
+
+		gs, err = d.GetSubGuilds(rc2.GuildId)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if len(gs) != 2 || rc3.Name != gs[rc3.GuildId].Name || rc3.GuildId != gs[rc3.GuildId].GuildId ||
+			rc2.Name != gs[rc2.GuildId].Name || rc2.GuildId != gs[rc2.GuildId].GuildId {
+
+			t.Fatalf("[%v] Wrong guilds returned. Actual: %v, expected: %v elements.", n, gs, 2)
+		}
+
+		gs, err = d.GetSubGuilds(rc1.GuildId)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if len(gs) != 3 || rc3.Name != gs[rc3.GuildId].Name || rc3.GuildId != gs[rc3.GuildId].GuildId ||
+			rc2.Name != gs[rc2.GuildId].Name || rc2.GuildId != gs[rc2.GuildId].GuildId ||
+			rc1.Name != gs[rc1.GuildId].Name || rc1.GuildId != gs[rc1.GuildId].GuildId {
+
+			t.Fatalf("[%v] Wrong guilds returned. Actual: %v, expected: %v elements.", n, gs, 3)
+		}
+	}
+}
+
 func TestGuildRename(t *testing.T) {
 	for n, d := range testable {
 		g := &database.Guild{
@@ -417,6 +530,52 @@ func TestGuildRemoveStat(t *testing.T) {
 		}
 		if g.Stats != nil && !reflect.DeepEqual(g.Stats, stats) {
 			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
+		}
+	}
+}
+
+func TestGuildMove(t *testing.T) {
+	for n, d := range testable {
+		g := &database.Guild{
+			Name:      "test_move",
+			DiscordId: "did_move",
+		}
+		rc1, err := d.AddGuild(g)
+
+		g = &database.Guild{
+			Name:     "sub1-test_move",
+			ParentId: rc1.GuildId,
+		}
+		rc2, err := d.AddGuild(g)
+
+		g = &database.Guild{
+			Name:     "sub2-test_move",
+			ParentId: rc2.GuildId,
+		}
+		rc3, err := d.AddGuild(g)
+
+		g, err = d.MoveGuild(uuid.New(), rc1.GuildId)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		g, err = d.MoveGuild(rc3.GuildId, uuid.New())
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Received: %v", n, g)
+		}
+		if e := assertError(err, "Parent guild was not found", database.GuildNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		g, err = d.MoveGuild(rc3.GuildId, rc1.GuildId)
+		if err != nil {
+			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
+		}
+		if g.GuildId != rc3.GuildId || g.ParentId != rc1.GuildId || g.TopLevelParentId != rc1.GuildId {
+			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v, with parent: %v", n, g, rc3, rc1.GuildId)
 		}
 	}
 }

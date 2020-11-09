@@ -56,9 +56,12 @@ type Money struct {
 type DataProvider interface {
 	AddGuild(g *Guild) (*Guild, *Error)
 	GetGuild(g uuid.UUID) (*Guild, *Error)
+	GetGuildN(d string, n string) (*Guild, *Error)
 	GetGuildD(d string) (*Guild, *Error)
+	GetSubGuilds(g uuid.UUID) (map[uuid.UUID]*Guild, *Error)
 	RenameGuild(g uuid.UUID, name string) (*Guild, *Error)
 	AddGuildStat(g uuid.UUID, n string, t string) (*Guild, *Error)
+	MoveGuild(g uuid.UUID, parent uuid.UUID) (*Guild, *Error)
 	RemoveGuildStat(g uuid.UUID, n string) (*Guild, *Error)
 	RemoveGuild(g uuid.UUID) (*Guild, *Error)
 	RemoveGuildD(d string) (*Guild, *Error)

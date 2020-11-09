@@ -6,33 +6,26 @@ import (
 )
 
 type AdminProcessor struct {
-	prov  database.DataProvider
-	funcs map[string]func(message.Message)
+	BaseMessageProcessor
 }
 
 func NewAdminProcessor(prov database.DataProvider) MessageProcessor {
-	ap := &AdminProcessor{prov: prov}
+	ap := &AdminProcessor{}
 	apu := NewAdminUserProcessor(prov)
+	apg := NewAdminGuildProcessor(prov)
 
-	ap.funcs = map[string]func(message.Message){
-		"h":    ap.help,
-		"help": ap.help,
-		"u":    apu.ProcessMessage,
-		"user": apu.ProcessMessage,
+	ap.Prov = prov
+
+	// TODO: Check permissions everywhere
+	ap.Funcs = map[string]func(message.Message){
+		"h":     ap.help,
+		"help":  ap.help,
+		"u":     apu.ProcessMessage,
+		"user":  apu.ProcessMessage,
+		"g":     apg.ProcessMessage,
+		"guild": apg.ProcessMessage,
 	}
 	return ap
-}
-
-func (ap *AdminProcessor) ProcessMessage(m message.Message) {
-	cmd := m.CurSegment()
-
-	f, ok := ap.funcs[cmd]
-	if !ok {
-		go m.SendMessage("Unknown admin command \"%v\". Send \"!g admin help\" or \"!g a h\" for help", m.FullMessage())
-		return
-	}
-
-	f(m)
 }
 
 func (ap *AdminProcessor) help(m message.Message) {
@@ -40,13 +33,13 @@ func (ap *AdminProcessor) help(m message.Message) {
 
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		go m.SendMessage("Some error happened while getting permissions: %v", err.Error())
+		m.SendMessage("Some error happened while getting permissions: %v", err.Error())
 		return
 	}
 
 	if perm == 0 {
 		rv += "Sorry, none. Ask leaders to let you do more"
-		go m.SendMessage(rv)
+		m.SendMessage(rv)
 		return
 	}
 
@@ -61,5 +54,5 @@ func (ap *AdminProcessor) help(m message.Message) {
 		rv += "\t-- \"!g admin role\" (\"!g a r\") - roles management\n"
 	}
 
-	go m.SendMessage(rv)
+	m.SendMessage(rv)
 }

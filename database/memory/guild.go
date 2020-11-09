@@ -50,10 +50,11 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, *databas
 	}
 
 	g.GuildId = uuid.New()
-	gdb.guilds[g.GuildId] = g
 	if g.DiscordId != "" {
+		g.TopLevelParentId = g.GuildId
 		gdb.guildsD[g.DiscordId] = g
 	}
+	gdb.guilds[g.GuildId] = g
 
 	return g, nil
 }
@@ -72,6 +73,57 @@ func (gdb *GuildMemoryDb) GetGuildD(d string) (*database.Guild, *database.Error)
 	}
 
 	return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
+}
+
+func (gdb *GuildMemoryDb) GetGuildN(p string, n string) (*database.Guild, *database.Error) {
+	gdb.mux.Lock()
+	defer gdb.mux.Unlock()
+
+	parent, ok := gdb.guildsD[p]
+	if !ok {
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Parent guild was not found"}
+	}
+
+	for _, g := range gdb.guilds {
+		if g.Name == n && g.TopLevelParentId == parent.GuildId {
+			return g, nil
+		}
+	}
+
+	return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
+}
+
+func (gdb *GuildMemoryDb) GetSubGuilds(g uuid.UUID) (map[uuid.UUID]*database.Guild, *database.Error) {
+	gdb.mux.Lock()
+	defer gdb.mux.Unlock()
+
+	gld, ok := gdb.guilds[g]
+	if !ok {
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
+	}
+
+	allGuilds := make(map[uuid.UUID]*database.Guild)
+	for _, g := range gdb.guilds {
+		if g.TopLevelParentId == gld.TopLevelParentId {
+			allGuilds[g.GuildId] = g
+		}
+	}
+
+	subGuilds := map[uuid.UUID]*database.Guild{
+		gld.GuildId: gld,
+	}
+	prevLen, length := -1, 0
+	for length > prevLen {
+		prevLen = length
+		for _, g := range allGuilds {
+			if _, ok := subGuilds[g.ParentId]; ok {
+				subGuilds[g.GuildId] = g
+			}
+		}
+		length = len(subGuilds)
+	}
+
+	return subGuilds, nil
 }
 
 func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild, *database.Error) {
@@ -156,10 +208,30 @@ func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guil
 	return guild, nil
 }
 
+func (gdb *GuildMemoryDb) MoveGuild(g uuid.UUID, p uuid.UUID) (*database.Guild, *database.Error) {
+	guild, ok := gdb.guilds[g]
+	if !ok {
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
+	}
+
+	if _, ok := gdb.guilds[p]; !ok {
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Parent guild was not found"}
+	}
+
+	guild.ParentId = p
+
+	return guild, nil
+}
+
 func (gdb *GuildMemoryDb) RemoveGuild(g uuid.UUID) (*database.Guild, *database.Error) {
 	guild, ok := gdb.guilds[g]
 	if !ok {
 		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
+	}
+
+	err := gdb.removeGuildsByParent(guild.GuildId)
+	if err != nil {
+		return nil, err
 	}
 
 	delete(gdb.guilds, g)
@@ -167,11 +239,6 @@ func (gdb *GuildMemoryDb) RemoveGuild(g uuid.UUID) (*database.Guild, *database.E
 		delete(gdb.guildsD, guild.DiscordId)
 	} else if parent, ok := gdb.guilds[guild.TopLevelParentId]; ok {
 		delete(parent.ChildNames, guild.Name)
-	}
-
-	err := gdb.removeGuildsByParent(guild.GuildId)
-	if err != nil {
-		return nil, err
 	}
 
 	return guild, nil
