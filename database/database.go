@@ -1,6 +1,8 @@
 package database
 
 import (
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -154,3 +156,58 @@ const (
 	StructurePermissions = EditSubStructurePerm | EditOneUpStructurePerm | EditGuildStructurePerm
 	CharsPermissions     = EditSubCharsPerm | EditOneUpCharsPerm | EditGuildCharsPerm
 )
+
+var stringToPermission = map[string]int{
+	"subedituser":  EditSubCharsPerm,
+	"su":           EditSubCharsPerm,
+	"subeditguild": EditSubStructurePerm,
+	"sg":           EditSubStructurePerm,
+
+	"oneupedituser":  EditOneUpCharsPerm,
+	"ou":             EditOneUpCharsPerm,
+	"oneupeditguild": EditOneUpStructurePerm,
+	"og":             EditOneUpStructurePerm,
+
+	"guildedituser":  EditGuildCharsPerm,
+	"gu":             EditGuildCharsPerm,
+	"guildeditguild": EditSubStructurePerm,
+	"gg":             EditGuildStructurePerm,
+}
+
+var permToString = map[int]string{
+	EditSubCharsPerm:     "SubEditUser",
+	EditSubStructurePerm: "SubEditGuild",
+
+	EditOneUpCharsPerm:     "OneUpEditUser",
+	EditOneUpStructurePerm: "OneUpEditGuild",
+
+	EditGuildCharsPerm:     "GuildEditUser",
+	EditGuildStructurePerm: "GuildEditGuild",
+}
+
+func StringToPermission(s string) (int, error) {
+	s = strings.ToLower(s)
+	if rv, ok := stringToPermission[s]; ok {
+		return rv, nil
+	}
+
+	return 0, errors.New("Permission " + s + " is not defined")
+}
+
+func PermissionToString(perm int) string {
+	rv, added := "", false
+	for v, s := range permToString {
+		if perm&v != 0 {
+			if added {
+				rv += ", "
+			}
+			rv += s
+			added = true
+		}
+	}
+
+	if rv == "" {
+		return "None"
+	}
+	return rv
+}

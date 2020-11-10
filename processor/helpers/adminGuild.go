@@ -5,7 +5,6 @@ import (
 	"github.com/mebaranov/disguildie/message"
 )
 
-// Just make this stuff generic. Some base processor with prov and funcs, and overrides for it.
 type AdminGuildProcessor struct {
 	BaseMessageProcessor
 }
