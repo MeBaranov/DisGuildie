@@ -13,6 +13,7 @@ func NewAdminProcessor(prov database.DataProvider) MessageProcessor {
 	ap := &AdminProcessor{}
 	apu := NewAdminUserProcessor(prov)
 	apg := NewAdminGuildProcessor(prov)
+	apr := NewAdminRoleProcessor(prov)
 
 	ap.Prov = prov
 
@@ -24,6 +25,8 @@ func NewAdminProcessor(prov database.DataProvider) MessageProcessor {
 		"user":  apu.ProcessMessage,
 		"g":     apg.ProcessMessage,
 		"guild": apg.ProcessMessage,
+		"r":     apr.ProcessMessage,
+		"role":  apr.ProcessMessage,
 	}
 	return ap
 }

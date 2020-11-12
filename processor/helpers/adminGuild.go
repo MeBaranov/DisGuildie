@@ -31,7 +31,7 @@ func (ap *AdminGuildProcessor) add(m message.Message) {
 	parent := m.CurSegment()
 
 	if parent == "" || gldName == "" {
-		m.SendMessage("Malformed command. Expected sub-guild name and parent name. Received: '%v'", m.FullMessage)
+		m.SendMessage("Malformed command. Expected sub-guild name and parent name. Received: '%v'", m.FullMessage())
 		return
 	}
 
@@ -63,7 +63,7 @@ func (ap *AdminGuildProcessor) rename(m message.Message) {
 	oldName := m.CurSegment()
 	newName := m.CurSegment()
 	if oldName == "" || newName == "" {
-		m.SendMessage("Malformed command. Expected sub-guild old name and new name. Received: '%v'", m.FullMessage)
+		m.SendMessage("Malformed command. Expected sub-guild old name and new name. Received: '%v'", m.FullMessage())
 		return
 	}
 
@@ -85,7 +85,7 @@ func (ap *AdminGuildProcessor) move(m message.Message) {
 	name := m.CurSegment()
 	parent := m.CurSegment()
 	if name == "" || parent == "" {
-		m.SendMessage("Malformed command. Expected sub-guild name and parent name. Received: '%v'", m.FullMessage)
+		m.SendMessage("Malformed command. Expected sub-guild name and parent name. Received: '%v'", m.FullMessage())
 		return
 	}
 
@@ -117,7 +117,7 @@ func (ap *AdminGuildProcessor) move(m message.Message) {
 func (ap *AdminGuildProcessor) remove(m message.Message) {
 	name := m.CurSegment()
 	if name == "" {
-		m.SendMessage("Malformed command. Expected sub-guild name. Received: '%v'", m.FullMessage)
+		m.SendMessage("Malformed command. Expected sub-guild name. Received: '%v'", m.FullMessage())
 		return
 	}
 

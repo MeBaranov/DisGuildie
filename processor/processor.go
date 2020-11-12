@@ -150,10 +150,12 @@ func (proc *Processor) messageCreate(s *discordgo.Session, m *discordgo.MessageC
 		return
 	}
 
-	_, err = msg.Author()
-	if err != nil {
-		msg.SendMessage("Could not validate your registration: %v", err.Error())
-		return
+	if msg.AuthorId() != *(proc.superUser) {
+		_, err = msg.Author()
+		if err != nil {
+			msg.SendMessage("Could not validate your registration: %v", err.Error())
+			return
+		}
 	}
 
 	msg.CurSegment()

@@ -25,6 +25,9 @@ func TestUserAdd(t *testing.T) {
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
+		if rc == u {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		rc, err = d.AddUser(u, perm)
 		if err == nil {
@@ -93,6 +96,9 @@ func TestUserGetD(t *testing.T) {
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
+		}
+		if rc == u {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		d.AddUser(u, perm)
@@ -163,6 +169,9 @@ func TestUserGetInGuild(t *testing.T) {
 		}
 		if rcs != nil && len(rcs) != 1 {
 			t.Fatalf("[%v] Wrong amount of users returned. Received: %v, expected: %v", n, len(rcs), 1)
+		}
+		if rcs[0] == u {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		d.AddUser(u, perm2)
@@ -240,6 +249,9 @@ func TestUserSetPermissions(t *testing.T) {
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
+		if rc == u {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		perm2 = &database.GuildPermission{TopGuild: "gdid32", GuildId: perm2.GuildId, Permissions: 1000}
 		guilds[perm2.TopGuild] = perm2
@@ -300,6 +312,9 @@ func TestUserSetSubguild(t *testing.T) {
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
+		if rc == u {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		perm2 = &database.GuildPermission{TopGuild: "gdid72", GuildId: uuid.New(), Permissions: 10}
 		guilds[perm2.TopGuild] = perm2
@@ -355,6 +370,9 @@ func TestUserRemove(t *testing.T) {
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
+		if rc == u {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		delete(guilds, perm2.TopGuild)
 		rc, err = d.RemoveUserD("did4", perm2.TopGuild)
@@ -397,6 +415,9 @@ func TestUserErase(t *testing.T) {
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
+		}
+		if rc == u {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		rc, err = d.GetUserD("did5")

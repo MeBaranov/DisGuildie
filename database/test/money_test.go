@@ -23,6 +23,9 @@ func TestMoneyAdd(t *testing.T) {
 		if rc.GuildId != m.GuildId || rc.UserId != m.UserId || rc.Price != m.Price || rc.ValidTo != m.ValidTo {
 			t.Fatalf("[%v] Wrong money returned. Actual: %v, expected: %v", n, rc, m)
 		}
+		if rc == m {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		m = &database.Money{
 			GuildId: "gid1",
@@ -73,6 +76,9 @@ func TestMoneyGet(t *testing.T) {
 		}
 		if rc.GuildId != m.GuildId || rc.UserId != m.UserId || rc.Price != m.Price || rc.ValidTo != m.ValidTo {
 			t.Fatalf("[%v] Wrong money returned. Actual: %v, expected: %v", n, rc, m)
+		}
+		if rc == m {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		m2 := &database.Money{
@@ -152,6 +158,9 @@ func TestMoneyChangeOwner(t *testing.T) {
 		if rc.GuildId != m.GuildId || rc.UserId != "uid23" || rc.Price != m.Price || rc.ValidTo != m.ValidTo {
 			t.Fatalf("[%v] Wrong money returned. Actual: %v, expected: %v", n, rc, m)
 		}
+		if rc == m {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		rc, err = d.GetMoney(g)
 		if err != nil {
@@ -189,6 +198,9 @@ func TestMoneySetValid(t *testing.T) {
 		}
 		if rc.GuildId != m.GuildId || rc.UserId != m.UserId || rc.Price != m.Price || rc.ValidTo != target {
 			t.Fatalf("[%v] Wrong money returned. Actual: %v, expected: %v", n, rc, m)
+		}
+		if rc == m {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		rc, err = d.GetMoney(g)

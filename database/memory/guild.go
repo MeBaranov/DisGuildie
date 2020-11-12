@@ -56,12 +56,14 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, *databas
 	}
 	gdb.guilds[g.GuildId] = g
 
-	return g, nil
+	tmp := *g
+	return &tmp, nil
 }
 
 func (gdb *GuildMemoryDb) GetGuild(g uuid.UUID) (*database.Guild, *database.Error) {
 	if guild, ok := gdb.guilds[g]; ok {
-		return guild, nil
+		tmp := *guild
+		return &tmp, nil
 	}
 
 	return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
@@ -69,7 +71,8 @@ func (gdb *GuildMemoryDb) GetGuild(g uuid.UUID) (*database.Guild, *database.Erro
 
 func (gdb *GuildMemoryDb) GetGuildD(d string) (*database.Guild, *database.Error) {
 	if guild, ok := gdb.guildsD[d]; ok {
-		return guild, nil
+		tmp := *guild
+		return &tmp, nil
 	}
 
 	return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
@@ -86,7 +89,8 @@ func (gdb *GuildMemoryDb) GetGuildN(p string, n string) (*database.Guild, *datab
 
 	for _, g := range gdb.guilds {
 		if g.Name == n && g.TopLevelParentId == parent.GuildId {
-			return g, nil
+			tmp := *g
+			return &tmp, nil
 		}
 	}
 
@@ -117,7 +121,8 @@ func (gdb *GuildMemoryDb) GetSubGuilds(g uuid.UUID) (map[uuid.UUID]*database.Gui
 		prevLen = length
 		for _, g := range allGuilds {
 			if _, ok := subGuilds[g.ParentId]; ok {
-				subGuilds[g.GuildId] = g
+				tmp := *g
+				subGuilds[g.GuildId] = &tmp
 			}
 		}
 		length = len(subGuilds)
@@ -136,7 +141,8 @@ func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild
 	}
 
 	if guild.Name == name {
-		return guild, nil
+		tmp := *guild
+		return &tmp, nil
 	}
 
 	p, ok := gdb.guilds[guild.TopLevelParentId]
@@ -156,7 +162,8 @@ func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild
 	guild.Name = name
 	p.ChildNames[name] = database.Member
 
-	return guild, nil
+	tmp := *guild
+	return &tmp, nil
 }
 
 func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, n string, t string) (*database.Guild, *database.Error) {
@@ -173,7 +180,8 @@ func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, n string, t string) (*databa
 
 	if et, ok := guild.Stats[n]; ok {
 		if et == t {
-			return guild, nil
+			tmp := *guild
+			return &tmp, nil
 		} else {
 			return nil, &database.Error{Code: database.StatNameConflict, Message: fmt.Sprintf("Stat with same name (%v) but different type (%v) found", n, et)}
 		}
@@ -183,7 +191,8 @@ func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, n string, t string) (*databa
 		guild.Stats = make(map[string]string)
 	}
 	guild.Stats[n] = t
-	return guild, nil
+	tmp := *guild
+	return &tmp, nil
 }
 
 func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guild, *database.Error) {
@@ -205,7 +214,8 @@ func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guil
 	if guild.Stats != nil {
 		delete(guild.Stats, n)
 	}
-	return guild, nil
+	tmp := *guild
+	return &tmp, nil
 }
 
 func (gdb *GuildMemoryDb) MoveGuild(g uuid.UUID, p uuid.UUID) (*database.Guild, *database.Error) {
@@ -220,7 +230,8 @@ func (gdb *GuildMemoryDb) MoveGuild(g uuid.UUID, p uuid.UUID) (*database.Guild, 
 
 	guild.ParentId = p
 
-	return guild, nil
+	tmp := *guild
+	return &tmp, nil
 }
 
 func (gdb *GuildMemoryDb) RemoveGuild(g uuid.UUID) (*database.Guild, *database.Error) {
@@ -241,7 +252,8 @@ func (gdb *GuildMemoryDb) RemoveGuild(g uuid.UUID) (*database.Guild, *database.E
 		delete(parent.ChildNames, guild.Name)
 	}
 
-	return guild, nil
+	tmp := *guild
+	return &tmp, nil
 }
 
 func (gdb *GuildMemoryDb) RemoveGuildD(d string) (*database.Guild, *database.Error) {
@@ -255,7 +267,8 @@ func (gdb *GuildMemoryDb) RemoveGuildD(d string) (*database.Guild, *database.Err
 		return nil, err
 	}
 
-	return guild, nil
+	tmp := *guild
+	return &tmp, nil
 }
 
 func (gdb *GuildMemoryDb) removeGuildsByParent(g uuid.UUID) *database.Error {

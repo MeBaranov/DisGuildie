@@ -1,6 +1,7 @@
 package message
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
@@ -34,6 +35,10 @@ func New(s *discordgo.Session, mc *discordgo.MessageCreate, prov database.DataPr
 
 func (dgm *DiscordGoMessage) GuildId() string {
 	return dgm.orig.GuildID
+}
+
+func (dgm *DiscordGoMessage) AuthorId() string {
+	return dgm.orig.Author.ID
 }
 
 func (dgm *DiscordGoMessage) ChannelId() string {
@@ -114,6 +119,39 @@ func (dgm *DiscordGoMessage) GuildMembers() (map[string]string, error) {
 	return dgm.members, nil
 }
 
+func (dgm *DiscordGoMessage) GuildMembersWithRole(r string) (map[string]string, error) {
+	if dgm.members == nil {
+		guildies := make(map[string]string)
+
+		cur := ""
+		for count := 1000; count == 100; {
+			gld, err := dgm.session.GuildMembers(dgm.orig.GuildID, cur, 1000)
+			if err != nil {
+				return nil, err
+			}
+
+			count = len(gld)
+			for _, m := range gld {
+				found := false
+				for _, rid := range m.Roles {
+					if rid == r {
+						found = true
+						break
+					}
+				}
+
+				if found {
+					guildies[m.User.ID] = m.Nick
+				}
+			}
+		}
+
+		dgm.members = guildies
+	}
+
+	return dgm.members, nil
+}
+
 func (dgm *DiscordGoMessage) CurSegment() string {
 	var rv string
 	rv, dgm.curMsg = utility.NextCommand(&dgm.curMsg)
@@ -137,6 +175,21 @@ func (dgm *DiscordGoMessage) UserRoles(id string) ([]string, error) {
 	}
 
 	return m.Roles, nil
+}
+
+func (dgm *DiscordGoMessage) GetRoleId(name string) (string, error) {
+	rs, err := dgm.session.GuildRoles(dgm.orig.GuildID)
+	if err != nil {
+		return "", err
+	}
+
+	for _, r := range rs {
+		if r.Name == name {
+			return r.ID, nil
+		}
+	}
+
+	return "nil", errors.New(fmt.Sprintf("Role with name %v was not found", name))
 }
 
 func (dgm *DiscordGoMessage) getPermissions() (int, error) {

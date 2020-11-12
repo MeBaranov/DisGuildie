@@ -21,6 +21,9 @@ func TestRoleAdd(t *testing.T) {
 		if rc.GuildId != r.GuildId && rc.Id != r.Id && rc.Permissions != r.Permissions {
 			t.Fatalf("[%v] Wrong Role returned. Actual: %v, expected: %v", n, rc, r)
 		}
+		if rc == r {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		rc, err = d.AddRole(r)
 		if err == nil {
@@ -82,6 +85,9 @@ func TestRoleGet(t *testing.T) {
 		}
 		if rc.GuildId != r.GuildId && rc.Id != r.Id && rc.Permissions != r.Permissions {
 			t.Fatalf("[%v] Wrong Role returned. Actual: %v, expected: %v", n, rc, r)
+		}
+		if rc == r {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		d.AddRole(r)
@@ -152,6 +158,9 @@ func TestRoleGetGuild(t *testing.T) {
 		if rc.GuildId != r.GuildId && rc.Id != r.Id && rc.Permissions != r.Permissions {
 			t.Fatalf("[%v] Wrong Role returned. Actual: %v, expected: %v", n, rc, r)
 		}
+		if rc == r {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		r = &database.Role{
 			GuildId:     gid,
@@ -200,6 +209,9 @@ func TestRoleSetPermisisons(t *testing.T) {
 		if rc.GuildId != r.GuildId && rc.Id != r.Id && rc.Permissions != 100 {
 			t.Fatalf("[%v] Wrong Role returned. Actual: %v, expected: %v", n, rc, r)
 		}
+		if rc == r {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 	}
 }
 
@@ -227,6 +239,9 @@ func TestRoleRemove(t *testing.T) {
 		}
 		if rc.GuildId != r.GuildId && rc.Id != r.Id && rc.Permissions != r.Permissions {
 			t.Fatalf("[%v] Wrong Role returned. Actual: %v, expected: %v", n, rc, r)
+		}
+		if rc == r {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		_, err = d.AddRole(r)

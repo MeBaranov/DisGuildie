@@ -26,6 +26,9 @@ func TestCharAdd(t *testing.T) {
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, rc, c)
 		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		c = &database.Character{
 			Name:   "test2",
@@ -38,6 +41,9 @@ func TestCharAdd(t *testing.T) {
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		c = &database.Character{
@@ -64,6 +70,9 @@ func TestCharAdd(t *testing.T) {
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong third character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 	}
 }
@@ -92,6 +101,9 @@ func TestCharGet(t *testing.T) {
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		rc, err = d.GetCharacter(u, "test2")
@@ -137,6 +149,9 @@ func TestCharGetMain(t *testing.T) {
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
 		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		c = &database.Character{
 			Name:   name,
@@ -151,6 +166,9 @@ func TestCharGetMain(t *testing.T) {
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		c2 := &database.Character{
@@ -193,6 +211,9 @@ func TestCharGetNameless(t *testing.T) {
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		c = &database.Character{
@@ -254,6 +275,9 @@ func TestCharGets(t *testing.T) {
 		if rc[0].Name != c.Name || rc[0].UserId != c.UserId {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
 		}
+		if rc[0] == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		c2 := &database.Character{
 			Name:   name,
@@ -314,6 +338,9 @@ func TestCharRename(t *testing.T) {
 		}
 		if rc.Name != "test2" || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		rc, err = d.GetCharacter(u, "test2")
@@ -403,6 +430,9 @@ func TestCharChangeOwner(t *testing.T) {
 		if rc.Name != name || rc.UserId != u2 {
 			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, *rc, *c)
 		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		rcs, err := d.GetCharacters(u)
 		if err != nil {
@@ -468,14 +498,14 @@ func TestCharChangeMain(t *testing.T) {
 			Name:   "test2",
 			UserId: u,
 		}
-		d.AddCharacter(c)
+		c, _ = d.AddCharacter(c)
 
 		c2 := &database.Character{
 			Name:   name,
 			UserId: u,
 			Main:   true,
 		}
-		d.AddCharacter(c2)
+		c2, _ = d.AddCharacter(c2)
 
 		rc, err := d.ChangeMainCharacter(u, "test2")
 		if err != nil {
@@ -488,6 +518,9 @@ func TestCharChangeMain(t *testing.T) {
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		rc, err = d.ChangeMainCharacter(u, "test3")
@@ -532,6 +565,9 @@ func TestCharSetStat(t *testing.T) {
 		}
 		if !reflect.DeepEqual(rc.Body, current) {
 			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		current["t2"] = 5
@@ -604,6 +640,9 @@ func TestCharRemoveStat(t *testing.T) {
 		}
 		if !reflect.DeepEqual(rc.Body, current) {
 			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		delete(current, "t1")
@@ -680,6 +719,9 @@ func TestCharRemove(t *testing.T) {
 		}
 		if rc.Name != c.Name || rc.UserId != c.UserId {
 			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, rc, c)
+		}
+		if rc == c {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		rcs, err := d.GetCharacters(u)

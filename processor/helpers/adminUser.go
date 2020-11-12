@@ -134,7 +134,7 @@ func (ap *AdminUserProcessor) assign(m message.Message) {
 	u := m.CurSegment()
 	g := m.CurSegment()
 	if u == "" || g == "" {
-		m.SendMessage("Malformed command. Expected user mention and sub-guild name (or 'main'). Received: '%v'", m.FullMessage)
+		m.SendMessage("Malformed command. Expected user mention and sub-guild name (or 'main'). Received: '%v'", m.FullMessage())
 	}
 
 	perm, err := m.AuthorPermissions()
@@ -149,7 +149,7 @@ func (ap *AdminUserProcessor) assign(m message.Message) {
 	}
 
 	if len(m.Mentions()) != 1 {
-		m.SendMessage("Malformed command. Expected user mention and sub-guild name (or 'main'). Received: '%v'", m.FullMessage)
+		m.SendMessage("Malformed command. Expected user mention and sub-guild name (or 'main'). Received: '%v'", m.FullMessage())
 		return
 	}
 

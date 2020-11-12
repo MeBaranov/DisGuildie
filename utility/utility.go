@@ -67,3 +67,11 @@ func ParseUserMention(m string) (string, error) {
 
 	return m[3 : len(m)-1], nil
 }
+
+func ParseRoleMention(m string) (string, error) {
+	if len(m) < 4 || m[0] != '<' || m[1] != '@' || m[2] != '&' || m[len(m)-1] != '>' {
+		return "", errors.New("Wrong format for a role")
+	}
+
+	return m[3 : len(m)-1], nil
+}

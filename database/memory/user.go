@@ -20,7 +20,8 @@ func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission)
 	if user, ok := udb.usersD[u.DiscordId]; ok {
 		if _, ok = user.Guilds[gp.TopGuild]; !ok {
 			user.Guilds[gp.TopGuild] = gp
-			return user, nil
+			tmp := *user
+			return &tmp, nil
 		}
 
 		return nil, &database.Error{Code: database.UserAlreadyInGuild, Message: "The user is already registered in the guild"}
@@ -31,15 +32,18 @@ func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission)
 	u.Guilds = map[string]*database.GuildPermission{gp.TopGuild: gp}
 	udb.usersD[u.DiscordId] = u
 
-	return u, nil
+	tmp := *u
+	return &tmp, nil
 }
 
 func (udb *UserMemoryDb) GetUserD(d string) (*database.User, *database.Error) {
-	if user, ok := udb.usersD[d]; ok {
-		return user, nil
+	rv, err := udb.getUserD(d)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, &database.Error{Code: database.UserNotFound, Message: "User was not found"}
+	tmp := *rv
+	return &tmp, nil
 }
 
 func (udb *UserMemoryDb) GetUsersInGuild(d string) ([]*database.User, *database.Error) {
@@ -49,7 +53,8 @@ func (udb *UserMemoryDb) GetUsersInGuild(d string) ([]*database.User, *database.
 	rv := make([]*database.User, 0, 100)
 	for _, u := range udb.usersD {
 		if _, ok := u.Guilds[d]; ok {
-			rv = append(rv, u)
+			tmp := *u
+			rv = append(rv, &tmp)
 		}
 	}
 
@@ -57,7 +62,7 @@ func (udb *UserMemoryDb) GetUsersInGuild(d string) ([]*database.User, *database.
 }
 
 func (udb *UserMemoryDb) SetUserPermissions(u string, gp *database.GuildPermission) (*database.User, *database.Error) {
-	user, err := udb.GetUserD(u)
+	user, err := udb.getUserD(u)
 	if err != nil {
 		return nil, err
 	}
@@ -68,11 +73,12 @@ func (udb *UserMemoryDb) SetUserPermissions(u string, gp *database.GuildPermissi
 	}
 
 	curGp.Permissions = gp.Permissions
-	return user, nil
+	tmp := *user
+	return &tmp, nil
 }
 
 func (udb *UserMemoryDb) SetUserSubGuild(u string, gp *database.GuildPermission) (*database.User, *database.Error) {
-	user, err := udb.GetUserD(u)
+	user, err := udb.getUserD(u)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +89,12 @@ func (udb *UserMemoryDb) SetUserSubGuild(u string, gp *database.GuildPermission)
 	}
 
 	curGp.GuildId = gp.GuildId
-	return user, nil
+	tmp := *user
+	return &tmp, nil
 }
 
 func (udb *UserMemoryDb) RemoveUserD(u string, g string) (*database.User, *database.Error) {
-	user, err := udb.GetUserD(u)
+	user, err := udb.getUserD(u)
 	if err != nil {
 		return nil, err
 	}
@@ -98,18 +105,28 @@ func (udb *UserMemoryDb) RemoveUserD(u string, g string) (*database.User, *datab
 
 	delete(user.Guilds, g)
 
-	return user, nil
+	tmp := *user
+	return &tmp, nil
 }
 
 func (udb *UserMemoryDb) EraseUserD(u string) (*database.User, *database.Error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
-	user, err := udb.GetUserD(u)
+	user, err := udb.getUserD(u)
 	if err != nil {
 		return nil, err
 	}
 
 	delete(udb.usersD, u)
-	return user, nil
+	tmp := *user
+	return &tmp, nil
+}
+
+func (udb *UserMemoryDb) getUserD(d string) (*database.User, *database.Error) {
+	if user, ok := udb.usersD[d]; ok {
+		return user, nil
+	}
+
+	return nil, &database.Error{Code: database.UserNotFound, Message: "User was not found"}
 }

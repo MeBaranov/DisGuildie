@@ -21,12 +21,15 @@ func (mdb *MoneyMemoryDb) AddMoney(m *database.Money) (*database.Money, *databas
 	}
 
 	mdb.money[m.GuildId] = m
-	return m, nil
+
+	tmp := *m
+	return &tmp, nil
 }
 
 func (mdb *MoneyMemoryDb) GetMoney(g string) (*database.Money, *database.Error) {
 	if m, ok := mdb.money[g]; ok {
-		return m, nil
+		tmp := *m
+		return &tmp, nil
 	}
 	return nil, &database.Error{Code: database.MoneyNotFound, Message: "Payment stuff for the guild is not found"}
 }
@@ -39,7 +42,8 @@ func (mdb *MoneyMemoryDb) ChangeMoneyOwner(g string, u string) (*database.Money,
 	}
 
 	m.UserId = u
-	return m, nil
+	tmp := *m
+	return &tmp, nil
 }
 
 func (mdb *MoneyMemoryDb) SetMoneyValid(g string, t time.Time) (*database.Money, *database.Error) {
@@ -51,5 +55,6 @@ func (mdb *MoneyMemoryDb) SetMoneyValid(g string, t time.Time) (*database.Money,
 
 	m.ValidTo = t
 
-	return m, nil
+	tmp := *m
+	return &tmp, nil
 }

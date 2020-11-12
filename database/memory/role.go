@@ -22,13 +22,16 @@ func (rdb *RoleMemoryDb) AddRole(r *database.Role) (*database.Role, *database.Er
 	}
 
 	rdb.roles[id] = r
-	return r, nil
+
+	tmp := *r
+	return &tmp, nil
 }
 
 func (rdb *RoleMemoryDb) GetRole(g string, r string) (*database.Role, *database.Error) {
 	id := getRoleId(g, r)
 	if r, ok := rdb.roles[id]; ok {
-		return r, nil
+		tmp := *r
+		return &tmp, nil
 	}
 
 	return nil, &database.Error{Code: database.RoleNotFound, Message: "Role was not found"}
@@ -38,7 +41,8 @@ func (rdb *RoleMemoryDb) GetGuildRoles(g string) ([]*database.Role, *database.Er
 	rv := make([]*database.Role, 0, 10)
 	for _, r := range rdb.roles {
 		if r.GuildId == g {
-			rv = append(rv, r)
+			tmp := *r
+			rv = append(rv, &tmp)
 		}
 	}
 
@@ -46,13 +50,15 @@ func (rdb *RoleMemoryDb) GetGuildRoles(g string) ([]*database.Role, *database.Er
 }
 
 func (rdb *RoleMemoryDb) SetRolePermissions(g string, r string, p int) (*database.Role, *database.Error) {
-	role, err := rdb.GetRole(g, r)
-	if err != nil {
-		return nil, err
+	id := getRoleId(g, r)
+	role, ok := rdb.roles[id]
+	if !ok {
+		return nil, &database.Error{Code: database.RoleNotFound, Message: "Role was not found"}
 	}
 
 	role.Permissions = p
-	return role, nil
+	tmp := *role
+	return &tmp, nil
 }
 
 func (rdb *RoleMemoryDb) RemoveRole(g string, r string) (*database.Role, *database.Error) {
@@ -67,7 +73,8 @@ func (rdb *RoleMemoryDb) RemoveRole(g string, r string) (*database.Role, *databa
 	}
 
 	delete(rdb.roles, id)
-	return role, nil
+	tmp := *role
+	return &tmp, nil
 }
 
 func getRoleId(g string, r string) string {

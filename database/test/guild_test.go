@@ -35,6 +35,9 @@ func TestGuildAdd(t *testing.T) {
 		if rc2.Name != g.Name || rc2.DiscordId != g.DiscordId {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v", n, rc2, g)
 		}
+		if rc2 == g {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		g = &database.Guild{
 			Name:     "sub1-test1",
@@ -149,6 +152,9 @@ func TestGuildGet(t *testing.T) {
 		if rc3.Name != g.Name || g.ParentId != rc2.GuildId || g.TopLevelParentId != rc1.GuildId {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v", n, g, rc3)
 		}
+		if rc3 == g {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		names := make(map[string]database.Void)
 		names["sub1-test1"] = database.Member
@@ -200,6 +206,9 @@ func TestGuildGetD(t *testing.T) {
 		}
 		if rc1.Name != g.Name || rc1.DiscordId != g.DiscordId || !reflect.DeepEqual(g.ChildNames, names) {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v, with child names: %v", n, g, rc1, names)
+		}
+		if rc1 == g {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		rce, err := d.GetGuildD("did233")
@@ -255,6 +264,9 @@ func TestGuildGetN(t *testing.T) {
 		if rc3.Name != g.Name || rc3.GuildId != g.GuildId {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v.", n, g, rc3)
 		}
+		if rc3 == g {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		g, err = d.GetGuildN("did_getn", "sub1-test_getn")
 		if err != nil {
@@ -300,6 +312,9 @@ func TestGuildGetSub(t *testing.T) {
 		}
 		if len(gs) != 1 || rc3.Name != gs[rc3.GuildId].Name || rc3.GuildId != gs[rc3.GuildId].GuildId {
 			t.Fatalf("[%v] Wrong guilds returned. Actual: %v, expected: %v.", n, gs, rc3)
+		}
+		if rc3 == gs[rc3.GuildId] {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		gs, err = d.GetSubGuilds(rc2.GuildId)
@@ -355,6 +370,9 @@ func TestGuildRename(t *testing.T) {
 		}
 		if rc.Name != "sub1-test2" || rc.GuildId != rc2.GuildId || rc.ParentId != rc1.GuildId {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: name: %v, parentId: %v", n, rc, "sub1-test2", rc1.GuildId)
+		}
+		if rc == rc2 {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		rce, err := d.RenameGuild(uuid.New(), "test3")
@@ -421,6 +439,9 @@ func TestGuildAddStat(t *testing.T) {
 		}
 		if !reflect.DeepEqual(g.Stats, stats) {
 			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
+		}
+		if rc1 == g {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		g, err = d.AddGuildStat(rc1.GuildId, "s1", "t1")
@@ -514,6 +535,9 @@ func TestGuildRemoveStat(t *testing.T) {
 		if !reflect.DeepEqual(g.Stats, stats) {
 			t.Fatalf("[%v] Wrong stats. Actual: %v, expected: %v", n, g.Stats, stats)
 		}
+		if rc1 == g {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 
 		delete(stats, "s1")
 		g, err = d.RemoveGuildStat(rc1.GuildId, "s1")
@@ -577,6 +601,9 @@ func TestGuildMove(t *testing.T) {
 		if g.GuildId != rc3.GuildId || g.ParentId != rc1.GuildId || g.TopLevelParentId != rc1.GuildId {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v, with parent: %v", n, g, rc3, rc1.GuildId)
 		}
+		if rc3 == g {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
+		}
 	}
 }
 
@@ -631,6 +658,9 @@ func TestGuildRemove(t *testing.T) {
 		}
 		if g.GuildId != rc2.GuildId || g.Name != rc2.Name {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v", n, g, rc2)
+		}
+		if rc2 == g {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		_, err = d.GetGuild(rc2.GuildId)
@@ -735,6 +765,9 @@ func TestGuildRemoveD(t *testing.T) {
 		}
 		if g.GuildId != rc1.GuildId || g.Name != rc1.Name {
 			t.Fatalf("[%v] Wrong guild returned. Actual: %v, expected: %v", n, g, rc1)
+		}
+		if rc1 == g {
+			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		_, err = d.GetGuild(rc1.GuildId)
