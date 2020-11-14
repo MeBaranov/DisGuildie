@@ -20,6 +20,8 @@ func (mdb *MoneyMemoryDb) AddMoney(m *database.Money) (*database.Money, *databas
 		return nil, &database.Error{Code: database.MoneyAlreadyRegistered, Message: "Payment stuff for the guild is already registered"}
 	}
 
+	newM := *m
+	m = &newM
 	mdb.money[m.GuildId] = m
 
 	tmp := *m

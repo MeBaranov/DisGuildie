@@ -23,6 +23,8 @@ func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Characte
 		return nil, &database.Error{Code: database.CharacterNameTaken, Message: fmt.Sprintf("User already has character with name %v", c.Name)}
 	}
 
+	newC := *c
+	c = &newC
 	cdb.chars[c.CharId] = c
 
 	tmp := *c

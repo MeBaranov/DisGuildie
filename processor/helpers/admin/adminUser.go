@@ -1,18 +1,19 @@
-package helpers
+package admin
 
 import (
 	"errors"
 
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
+	"github.com/mebaranov/disguildie/processor/helpers"
 	"github.com/mebaranov/disguildie/utility"
 )
 
 type AdminUserProcessor struct {
-	BaseMessageProcessor
+	helpers.BaseMessageProcessor
 }
 
-func NewAdminUserProcessor(prov database.DataProvider) MessageProcessor {
+func NewAdminUserProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	ap := &AdminUserProcessor{}
 	ap.Prov = prov
 	ap.Funcs = map[string]func(message.Message){
@@ -75,6 +76,16 @@ func (ap *AdminUserProcessor) remove(m message.Message) {
 
 	if uid != m.Mentions()[0] {
 		m.SendMessage("Error: You're doing something tricky. Mention is inconsistent. Try again, please")
+		return
+	}
+
+	ok, err, _ := ap.checkModificationPermissions(m, uid)
+	if err != nil {
+		m.SendMessage(err.Error())
+		return
+	}
+	if !ok {
+		m.SendMessage("You don't have permissions to delete this user")
 		return
 	}
 
@@ -164,15 +175,32 @@ func (ap *AdminUserProcessor) assign(m message.Message) {
 		return
 	}
 
-	if _, err = ap.Prov.GetUserD(uid); err != nil {
-		m.SendMessage("Error getting user: %v", err.Error())
-		return
-	}
-
 	guild, err := ap.Prov.GetGuildN(m.GuildId(), g)
 	if err != nil {
 		m.SendMessage("Could not get subguild: '%v'", m.CurSegment())
 		return
+	}
+
+	ok, err, gper := ap.checkModificationPermissions(m, uid)
+	if err != nil {
+		m.SendMessage(err.Error())
+		return
+	}
+	if !ok {
+		m.SendMessage("You don't have permissions to assign this user")
+		return
+	}
+
+	if gper != nil {
+		ok, err := utility.ValidateUserAccess(ap.Prov, gper, guild.GuildId)
+		if err != nil {
+			m.SendMessage(err.Error())
+			return
+		}
+		if !ok {
+			m.SendMessage("You don't have permissions to move users into this sub-guild")
+			return
+		}
 	}
 
 	_, err = ap.Prov.SetUserSubGuild(uid, &database.GuildPermission{TopGuild: m.GuildId(), GuildId: guild.GuildId})
@@ -352,6 +380,26 @@ func (ap *AdminUserProcessor) reigsterUser(id string, guild *database.Guild, m m
 		}
 	}
 
+	authorPerms, err := m.AuthorPermissions()
+	if err != nil {
+		return err
+	}
+
+	guildToAdd := guild.GuildId
+	if authorPerms&database.EditGuildCharsPerm == 0 {
+		auth, err := m.Author()
+		if err != nil {
+			return errors.New("You don't seem to be a part of this guild. Try again later.")
+		}
+
+		gper, ok := auth.Guilds[m.GuildId()]
+		if !ok {
+			return errors.New("You don't seem to be a part of this guild. Try again later.")
+		}
+
+		guildToAdd = gper.GuildId
+	}
+
 	p, err := ap.userPermissions(id, m)
 	if err != nil {
 		return err
@@ -359,7 +407,7 @@ func (ap *AdminUserProcessor) reigsterUser(id string, guild *database.Guild, m m
 
 	dbgp := &database.GuildPermission{
 		Permissions: p,
-		GuildId:     guild.GuildId,
+		GuildId:     guildToAdd,
 		TopGuild:    guild.DiscordId,
 	}
 
@@ -446,4 +494,43 @@ func (ap *AdminUserProcessor) rolePermission(g string, r string) (int, error) {
 	}
 
 	return role.Permissions, nil
+}
+
+func (ap *AdminUserProcessor) checkModificationPermissions(m message.Message, uid string) (bool, error, *database.GuildPermission) {
+	var err error
+	trgUser, err := ap.Prov.GetUserD(uid)
+	if err != nil {
+		return false, errors.New("User you're trying to modify doesn't seem to be a part of this guild"), nil
+	}
+
+	trgPerm, ok := trgUser.Guilds[m.GuildId()]
+	if !ok {
+		return false, errors.New("User you're trying to modify doesn't seem to be a part of this guild"), nil
+	}
+
+	perm, err := m.AuthorPermissions()
+	if err != nil {
+		return false, err, nil
+	}
+
+	if perm&database.EditGuildCharsPerm != 0 {
+		return true, nil, nil
+	}
+
+	auth, err := m.Author()
+	if err != nil {
+		return false, errors.New("You don't seem to be a part of this guild Oo. Try again later please"), nil
+	}
+
+	gper, ok := auth.Guilds[m.GuildId()]
+	if !ok {
+		return false, errors.New("You don't seem to be a part of this guild Oo. Try again later please"), nil
+	}
+
+	ok, err = utility.ValidateUserAccess(ap.Prov, gper, trgPerm.GuildId)
+	if err != nil {
+		return false, err, nil
+	}
+
+	return ok, nil, gper
 }

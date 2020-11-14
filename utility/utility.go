@@ -5,6 +5,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/mebaranov/disguildie/database"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -74,4 +77,69 @@ func ParseRoleMention(m string) (string, error) {
 	}
 
 	return m[3 : len(m)-1], nil
+}
+
+func ValidateUserAccess(prov database.DataProvider, from *database.GuildPermission, subGuild uuid.UUID) (bool, error) {
+	if from.Permissions&database.CharsPermissions == 0 {
+		return false, nil
+	}
+
+	if from.Permissions&database.EditGuildCharsPerm != 0 {
+		return true, nil
+	}
+
+	g := from.GuildId
+	if from.Permissions&database.EditOneUpCharsPerm != 0 {
+		guild, err := prov.GetGuild(g)
+		if err != nil {
+			return false, err
+		}
+
+		if guild.DiscordId == "" {
+			g = guild.ParentId
+		}
+	}
+
+	return CheckIfSubguild(prov, g, subGuild)
+}
+
+func ValidateGuildAccess(prov database.DataProvider, from *database.GuildPermission, subGuild uuid.UUID) (bool, error) {
+	if from.Permissions&database.StructurePermissions == 0 {
+		return false, nil
+	}
+
+	if from.Permissions&database.EditGuildStructurePerm != 0 {
+		return true, nil
+	}
+
+	g := from.GuildId
+	if from.Permissions&database.EditOneUpStructurePerm != 0 {
+		guild, err := prov.GetGuild(g)
+		if err != nil {
+			return false, err
+		}
+
+		if guild.DiscordId == "" {
+			g = guild.ParentId
+		}
+	}
+
+	return CheckIfSubguild(prov, g, subGuild)
+}
+
+func CheckIfSubguild(prov database.DataProvider, g uuid.UUID, sub uuid.UUID) (bool, error) {
+	for sub != g {
+		sg, err := prov.GetGuild(sub)
+		if err != nil {
+			return false, err
+		}
+
+		if sg.DiscordId != "" {
+			return false, nil
+		}
+
+		sub = sg.ParentId
+	}
+
+	return true, nil
 }

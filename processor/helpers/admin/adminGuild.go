@@ -1,15 +1,16 @@
-package helpers
+package admin
 
 import (
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
+	"github.com/mebaranov/disguildie/processor/helpers"
 )
 
 type AdminGuildProcessor struct {
-	BaseMessageProcessor
+	helpers.BaseMessageProcessor
 }
 
-func NewAdminGuildProcessor(prov database.DataProvider) MessageProcessor {
+func NewAdminGuildProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	ap := &AdminGuildProcessor{}
 	ap.Prov = prov
 	ap.Funcs = map[string]func(message.Message){

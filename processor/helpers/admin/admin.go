@@ -1,23 +1,25 @@
-package helpers
+package admin
 
 import (
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
+	"github.com/mebaranov/disguildie/processor/helpers"
 )
 
 type AdminProcessor struct {
-	BaseMessageProcessor
+	helpers.BaseMessageProcessor
 }
 
-func NewAdminProcessor(prov database.DataProvider) MessageProcessor {
+func NewAdminProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	ap := &AdminProcessor{}
 	apu := NewAdminUserProcessor(prov)
 	apg := NewAdminGuildProcessor(prov)
 	apr := NewAdminRoleProcessor(prov)
+	aps := NewAdminStatsProcessor(prov)
 
 	ap.Prov = prov
 
-	// TODO: Check permissions everywhere
+	// TODO: Check permissions in guild
 	ap.Funcs = map[string]func(message.Message){
 		"h":     ap.help,
 		"help":  ap.help,
@@ -27,6 +29,8 @@ func NewAdminProcessor(prov database.DataProvider) MessageProcessor {
 		"guild": apg.ProcessMessage,
 		"r":     apr.ProcessMessage,
 		"role":  apr.ProcessMessage,
+		"s":     aps.ProcessMessage,
+		"stats": aps.ProcessMessage,
 	}
 	return ap
 }

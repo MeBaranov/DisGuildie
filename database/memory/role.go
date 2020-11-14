@@ -21,6 +21,8 @@ func (rdb *RoleMemoryDb) AddRole(r *database.Role) (*database.Role, *database.Er
 		return nil, &database.Error{Code: database.RoleAlreadyExists, Message: "Role with this ID already exists in this guild"}
 	}
 
+	newR := *r
+	r = &newR
 	rdb.roles[id] = r
 
 	tmp := *r

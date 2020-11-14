@@ -10,7 +10,7 @@ import (
 
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
-	"github.com/mebaranov/disguildie/processor/helpers"
+	"github.com/mebaranov/disguildie/processor/helpers/admin"
 )
 
 type Processor struct {
@@ -32,7 +32,7 @@ func New(
 	price int,
 	freeDuration time.Duration) (*Processor, error) {
 
-	admin := helpers.NewAdminProcessor(prov)
+	admin := admin.NewAdminProcessor(prov)
 	proc := &Processor{
 		provider:     prov,
 		rc:           make(chan bool),

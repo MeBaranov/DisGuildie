@@ -1,18 +1,19 @@
-package helpers
+package admin
 
 import (
 	"errors"
 
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
+	"github.com/mebaranov/disguildie/processor/helpers"
 	"github.com/mebaranov/disguildie/utility"
 )
 
 type AdminRoleProcessor struct {
-	BaseMessageProcessor
+	helpers.BaseMessageProcessor
 }
 
-func NewAdminRoleProcessor(prov database.DataProvider) MessageProcessor {
+func NewAdminRoleProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	ap := &AdminRoleProcessor{}
 	ap.Prov = prov
 	ap.Funcs = map[string]func(message.Message){
@@ -169,7 +170,7 @@ func (ap *AdminRoleProcessor) reset(m message.Message) {
 }
 
 func (ap *AdminRoleProcessor) help(m message.Message) {
-	rv := "Here's a list of guild management commands you're allowed to use:\n"
+	rv := "Here's a list of role management commands you're allowed to use:\n"
 
 	perm, err := m.AuthorPermissions()
 	if err != nil {

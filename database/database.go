@@ -12,13 +12,25 @@ type Void interface{}
 
 var Member Void
 
+const (
+	_ = iota
+	Number
+	Str
+)
+
+type Stat struct {
+	ID          string
+	Type        int
+	Description string
+}
+
 type Guild struct {
 	GuildId          uuid.UUID
 	ParentId         uuid.UUID
 	TopLevelParentId uuid.UUID
 	DiscordId        string
 	Name             string
-	Stats            map[string]string
+	Stats            map[string]*Stat
 	ChildNames       map[string]Void
 }
 
@@ -62,11 +74,13 @@ type DataProvider interface {
 	GetGuildD(d string) (*Guild, *Error)
 	GetSubGuilds(g uuid.UUID) (map[uuid.UUID]*Guild, *Error)
 	RenameGuild(g uuid.UUID, name string) (*Guild, *Error)
-	AddGuildStat(g uuid.UUID, n string, t string) (*Guild, *Error)
 	MoveGuild(g uuid.UUID, parent uuid.UUID) (*Guild, *Error)
-	RemoveGuildStat(g uuid.UUID, n string) (*Guild, *Error)
 	RemoveGuild(g uuid.UUID) (*Guild, *Error)
 	RemoveGuildD(d string) (*Guild, *Error)
+
+	AddGuildStat(g uuid.UUID, s *Stat) (*Guild, *Error)
+	RemoveGuildStat(g uuid.UUID, n string) (*Guild, *Error)
+	RemoveAllGuildStats(g uuid.UUID) (*Guild, *Error)
 
 	AddUser(u *User, g *GuildPermission) (*User, *Error)
 	GetUserD(d string) (*User, *Error)
@@ -185,6 +199,17 @@ var permToString = map[int]string{
 	EditGuildStructurePerm: "GuildEditGuild",
 }
 
+var stringToType = map[string]int{
+	"str": Str,
+	"num": Number,
+	"int": Number,
+}
+
+var typeToString = map[int]string{
+	Str:    "str",
+	Number: "int",
+}
+
 func StringToPermission(s string) (int, error) {
 	s = strings.ToLower(s)
 	if rv, ok := stringToPermission[s]; ok {
@@ -210,4 +235,21 @@ func PermissionToString(perm int) string {
 		return "None"
 	}
 	return rv
+}
+
+func StringToType(s string) (int, error) {
+	s = strings.ToLower(s)
+	if rv, ok := stringToType[s]; ok {
+		return rv, nil
+	}
+
+	return 0, errors.New("Type " + s + " is not defined")
+}
+
+func TypeToString(t int) string {
+	if rv, ok := typeToString[t]; ok {
+		return rv
+	}
+
+	return "undefined"
 }

@@ -27,6 +27,9 @@ func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission)
 		return nil, &database.Error{Code: database.UserAlreadyInGuild, Message: "The user is already registered in the guild"}
 	}
 
+	newU := *u
+	u = &newU
+
 	uid := uuid.New()
 	u.UserId = uid
 	u.Guilds = map[string]*database.GuildPermission{gp.TopGuild: gp}

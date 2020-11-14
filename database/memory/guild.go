@@ -49,6 +49,8 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, *databas
 		p.ChildNames[g.Name] = database.Member
 	}
 
+	newG := *g
+	g = &newG
 	g.GuildId = uuid.New()
 	if g.DiscordId != "" {
 		g.TopLevelParentId = g.GuildId
@@ -166,58 +168,6 @@ func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, n string, t string) (*database.Guild, *database.Error) {
-	gdb.mux.Lock()
-	defer gdb.mux.Unlock()
-
-	guild, ok := gdb.guilds[g]
-	if !ok {
-		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
-	}
-	if guild.DiscordId == "" {
-		return nil, &database.Error{Code: database.GuildLevelError, Message: "Only top-level guild stats are supported right now"}
-	}
-
-	if et, ok := guild.Stats[n]; ok {
-		if et == t {
-			tmp := *guild
-			return &tmp, nil
-		} else {
-			return nil, &database.Error{Code: database.StatNameConflict, Message: fmt.Sprintf("Stat with same name (%v) but different type (%v) found", n, et)}
-		}
-	}
-
-	if guild.Stats == nil {
-		guild.Stats = make(map[string]string)
-	}
-	guild.Stats[n] = t
-	tmp := *guild
-	return &tmp, nil
-}
-
-func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guild, *database.Error) {
-	gdb.mux.Lock()
-	defer gdb.mux.Unlock()
-
-	guild, ok := gdb.guilds[g]
-	if !ok {
-		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
-	}
-	if guild.DiscordId == "" {
-		return nil, &database.Error{Code: database.GuildLevelError, Message: "Only top-level guild stats are supported right now"}
-	}
-
-	if _, ok := guild.Stats[n]; !ok {
-		return nil, &database.Error{Code: database.StatNotFound, Message: "Stat was not found"}
-	}
-
-	if guild.Stats != nil {
-		delete(guild.Stats, n)
-	}
-	tmp := *guild
-	return &tmp, nil
-}
-
 func (gdb *GuildMemoryDb) MoveGuild(g uuid.UUID, p uuid.UUID) (*database.Guild, *database.Error) {
 	guild, ok := gdb.guilds[g]
 	if !ok {
@@ -267,6 +217,77 @@ func (gdb *GuildMemoryDb) RemoveGuildD(d string) (*database.Guild, *database.Err
 		return nil, err
 	}
 
+	tmp := *guild
+	return &tmp, nil
+}
+
+func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, s *database.Stat) (*database.Guild, *database.Error) {
+	gdb.mux.Lock()
+	defer gdb.mux.Unlock()
+
+	guild, ok := gdb.guilds[g]
+	if !ok {
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
+	}
+	if guild.DiscordId == "" {
+		return nil, &database.Error{Code: database.GuildLevelError, Message: "Only top-level guild stats are supported right now"}
+	}
+
+	if et, ok := guild.Stats[s.ID]; ok {
+		if et.Type == s.Type {
+			et.Description = s.Description
+			tmp := *guild
+			return &tmp, nil
+		} else {
+			return nil, &database.Error{Code: database.StatNameConflict, Message: fmt.Sprintf("Stat with same name (%v) but different type (%v) found", s.ID, et.Type)}
+		}
+	}
+
+	if guild.Stats == nil {
+		guild.Stats = make(map[string]*database.Stat)
+	}
+	tmpStat := *s
+	guild.Stats[s.ID] = &tmpStat
+	tmp := *guild
+	return &tmp, nil
+}
+
+func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guild, *database.Error) {
+	gdb.mux.Lock()
+	defer gdb.mux.Unlock()
+
+	guild, ok := gdb.guilds[g]
+	if !ok {
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
+	}
+	if guild.DiscordId == "" {
+		return nil, &database.Error{Code: database.GuildLevelError, Message: "Only top-level guild stats are supported right now"}
+	}
+
+	if _, ok := guild.Stats[n]; !ok {
+		return nil, &database.Error{Code: database.StatNotFound, Message: "Stat was not found"}
+	}
+
+	if guild.Stats != nil {
+		delete(guild.Stats, n)
+	}
+	tmp := *guild
+	return &tmp, nil
+}
+
+func (gdb *GuildMemoryDb) RemoveAllGuildStats(g uuid.UUID) (*database.Guild, *database.Error) {
+	gdb.mux.Lock()
+	defer gdb.mux.Unlock()
+
+	guild, ok := gdb.guilds[g]
+	if !ok {
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
+	}
+	if guild.DiscordId == "" {
+		return nil, &database.Error{Code: database.GuildLevelError, Message: "Only top-level guild stats are supported right now"}
+	}
+
+	guild.Stats = nil
 	tmp := *guild
 	return &tmp, nil
 }
