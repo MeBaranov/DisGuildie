@@ -79,7 +79,7 @@ func (ap *AdminUserProcessor) remove(m message.Message) {
 		return
 	}
 
-	ok, err, _ := ap.checkModificationPermissions(m, uid)
+	ok, err := ap.CheckUserModificationPermissions(m, uid)
 	if err != nil {
 		m.SendMessage(err.Error())
 		return
@@ -181,7 +181,7 @@ func (ap *AdminUserProcessor) assign(m message.Message) {
 		return
 	}
 
-	ok, err, gper := ap.checkModificationPermissions(m, uid)
+	ok, err := ap.CheckUserModificationPermissions(m, uid)
 	if err != nil {
 		m.SendMessage(err.Error())
 		return
@@ -191,16 +191,14 @@ func (ap *AdminUserProcessor) assign(m message.Message) {
 		return
 	}
 
-	if gper != nil {
-		ok, err := utility.ValidateUserAccess(ap.Prov, gper, guild.GuildId)
-		if err != nil {
-			m.SendMessage(err.Error())
-			return
-		}
-		if !ok {
-			m.SendMessage("You don't have permissions to move users into this sub-guild")
-			return
-		}
+	ok, err = ap.CheckGuildModificationPermissions(m, guild.GuildId)
+	if err != nil {
+		m.SendMessage(err.Error())
+		return
+	}
+	if !ok {
+		m.SendMessage("You don't have permissions to move users into this sub-guild")
+		return
 	}
 
 	_, err = ap.Prov.SetUserSubGuild(uid, &database.GuildPermission{TopGuild: m.GuildId(), GuildId: guild.GuildId})
@@ -494,43 +492,4 @@ func (ap *AdminUserProcessor) rolePermission(g string, r string) (int, error) {
 	}
 
 	return role.Permissions, nil
-}
-
-func (ap *AdminUserProcessor) checkModificationPermissions(m message.Message, uid string) (bool, error, *database.GuildPermission) {
-	var err error
-	trgUser, err := ap.Prov.GetUserD(uid)
-	if err != nil {
-		return false, errors.New("User you're trying to modify doesn't seem to be a part of this guild"), nil
-	}
-
-	trgPerm, ok := trgUser.Guilds[m.GuildId()]
-	if !ok {
-		return false, errors.New("User you're trying to modify doesn't seem to be a part of this guild"), nil
-	}
-
-	perm, err := m.AuthorPermissions()
-	if err != nil {
-		return false, err, nil
-	}
-
-	if perm&database.EditGuildCharsPerm != 0 {
-		return true, nil, nil
-	}
-
-	auth, err := m.Author()
-	if err != nil {
-		return false, errors.New("You don't seem to be a part of this guild Oo. Try again later please"), nil
-	}
-
-	gper, ok := auth.Guilds[m.GuildId()]
-	if !ok {
-		return false, errors.New("You don't seem to be a part of this guild Oo. Try again later please"), nil
-	}
-
-	ok, err = utility.ValidateUserAccess(ap.Prov, gper, trgPerm.GuildId)
-	if err != nil {
-		return false, err, nil
-	}
-
-	return ok, nil, gper
 }

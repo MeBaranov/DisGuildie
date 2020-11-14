@@ -3,8 +3,6 @@ package memory
 import (
 	"sync"
 
-	"github.com/google/uuid"
-
 	"github.com/mebaranov/disguildie/database"
 )
 
@@ -17,7 +15,7 @@ func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission)
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
-	if user, ok := udb.usersD[u.DiscordId]; ok {
+	if user, ok := udb.usersD[u.Id]; ok {
 		if _, ok = user.Guilds[gp.TopGuild]; !ok {
 			user.Guilds[gp.TopGuild] = gp
 			tmp := *user
@@ -30,10 +28,8 @@ func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission)
 	newU := *u
 	u = &newU
 
-	uid := uuid.New()
-	u.UserId = uid
 	u.Guilds = map[string]*database.GuildPermission{gp.TopGuild: gp}
-	udb.usersD[u.DiscordId] = u
+	udb.usersD[u.Id] = u
 
 	tmp := *u
 	return &tmp, nil

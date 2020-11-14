@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/google/uuid"
-
 	"github.com/mebaranov/disguildie/database"
 )
 
@@ -18,20 +16,20 @@ func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Characte
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
-	c.CharId = getCharacterId(c.UserId, c.Name)
-	if _, ok := cdb.chars[c.CharId]; ok {
+	id := getCharacterId(c.GuildId, c.UserId, c.Name)
+	if _, ok := cdb.chars[id]; ok {
 		return nil, &database.Error{Code: database.CharacterNameTaken, Message: fmt.Sprintf("User already has character with name %v", c.Name)}
 	}
 
 	newC := *c
 	c = &newC
-	cdb.chars[c.CharId] = c
+	cdb.chars[id] = c
 
 	tmp := *c
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) GetCharacters(u uuid.UUID) ([]*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) GetCharacters(g string, u string) ([]*database.Character, *database.Error) {
 	rv := make([]*database.Character, 0, 10)
 	for _, v := range cdb.chars {
 		if v.UserId == u {
@@ -43,8 +41,8 @@ func (cdb *CharMemoryDb) GetCharacters(u uuid.UUID) ([]*database.Character, *dat
 	return rv, nil
 }
 
-func (cdb *CharMemoryDb) GetMainCharacter(u uuid.UUID) (*database.Character, *database.Error) {
-	rv, err := cdb.getMainCharacter(u)
+func (cdb *CharMemoryDb) GetMainCharacter(g string, u string) (*database.Character, *database.Error) {
+	rv, err := cdb.getMainCharacter(g, u)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +51,8 @@ func (cdb *CharMemoryDb) GetMainCharacter(u uuid.UUID) (*database.Character, *da
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) GetCharacter(u uuid.UUID, name string) (*database.Character, *database.Error) {
-	rv, err := cdb.getCharacter(u, name)
+func (cdb *CharMemoryDb) GetCharacter(g string, u string, name string) (*database.Character, *database.Error) {
+	rv, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
 	}
@@ -63,36 +61,36 @@ func (cdb *CharMemoryDb) GetCharacter(u uuid.UUID, name string) (*database.Chara
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) RenameCharacter(u uuid.UUID, old string, name string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) RenameCharacter(g string, u string, old string, name string) (*database.Character, *database.Error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
-	c, err := cdb.getCharacter(u, old)
+	c, err := cdb.getCharacter(g, u, old)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = cdb.getCharacter(u, name)
+	_, err = cdb.getCharacter(g, u, name)
 	if err == nil {
 		return nil, &database.Error{Code: database.CharacterNameTaken, Message: "Character with that name already exists"}
 	}
 
 	c.Name = name
-	delete(cdb.chars, c.CharId)
-	c.CharId = getCharacterId(u, name)
-	cdb.chars[c.CharId] = c
+	idO, idN := getCharacterId(g, u, old), getCharacterId(g, u, name)
+	delete(cdb.chars, idO)
+	cdb.chars[idN] = c
 
 	tmp := *c
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) ChangeMainCharacter(u uuid.UUID, name string) (*database.Character, *database.Error) {
-	c, err := cdb.getCharacter(u, name)
+func (cdb *CharMemoryDb) ChangeMainCharacter(g string, u string, name string) (*database.Character, *database.Error) {
+	c, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
 	}
 
-	old, err := cdb.getMainCharacter(u)
+	old, err := cdb.getMainCharacter(g, u)
 	if err == nil {
 		old.Main = false
 	}
@@ -103,8 +101,8 @@ func (cdb *CharMemoryDb) ChangeMainCharacter(u uuid.UUID, name string) (*databas
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) SetCharacterStat(u uuid.UUID, name string, s string, v interface{}) (*database.Character, *database.Error) {
-	c, err := cdb.getCharacter(u, name)
+func (cdb *CharMemoryDb) SetCharacterStat(g string, u string, name string, s string, v interface{}) (*database.Character, *database.Error) {
+	c, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
 	}
@@ -118,31 +116,31 @@ func (cdb *CharMemoryDb) SetCharacterStat(u uuid.UUID, name string, s string, v 
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) ChangeCharacterOwner(old uuid.UUID, name string, u uuid.UUID) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) ChangeCharacterOwner(g string, old string, name string, u string) (*database.Character, *database.Error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
-	c, err := cdb.getCharacter(old, name)
+	c, err := cdb.getCharacter(g, old, name)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = cdb.getCharacter(u, name)
+	_, err = cdb.getCharacter(g, u, name)
 	if err == nil {
 		return nil, &database.Error{Code: database.UserHasCharacter, Message: fmt.Sprintf("Target user already has character with name '%v'", name)}
 	}
 
 	c.UserId = u
-	delete(cdb.chars, c.CharId)
-	c.CharId = getCharacterId(u, name)
-	cdb.chars[c.CharId] = c
+	ido, idn := getCharacterId(g, old, name), getCharacterId(g, u, name)
+	delete(cdb.chars, ido)
+	cdb.chars[idn] = c
 
 	tmp := *c
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) RemoveCharacterStat(u uuid.UUID, name string, s string) (*database.Character, *database.Error) {
-	c, err := cdb.getCharacter(u, name)
+func (cdb *CharMemoryDb) RemoveCharacterStat(g string, u string, name string, s string) (*database.Character, *database.Error) {
+	c, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
 	}
@@ -157,30 +155,31 @@ func (cdb *CharMemoryDb) RemoveCharacterStat(u uuid.UUID, name string, s string)
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) RemoveCharacter(u uuid.UUID, name string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) RemoveCharacter(g string, u string, name string) (*database.Character, *database.Error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
-	c, err := cdb.getCharacter(u, name)
+	c, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, nil
 	}
 
-	delete(cdb.chars, c.CharId)
+	id := getCharacterId(g, u, name)
+	delete(cdb.chars, id)
 	tmp := *c
 	return &tmp, nil
 }
 
-func getCharacterId(u uuid.UUID, name string) string {
-	return fmt.Sprintf("%v:%v", u, name)
+func getCharacterId(g string, u string, name string) string {
+	return fmt.Sprintf("%v:%v:%v", g, u, name)
 }
 
-func (cdb *CharMemoryDb) getCharacter(u uuid.UUID, name string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) getCharacter(g string, u string, name string) (*database.Character, *database.Error) {
 	if name == "" {
-		return cdb.getMainCharacter(u)
+		return cdb.getMainCharacter(g, u)
 	}
 
-	id := getCharacterId(u, name)
+	id := getCharacterId(g, u, name)
 	if c, ok := cdb.chars[id]; ok {
 		return c, nil
 	}
@@ -188,10 +187,10 @@ func (cdb *CharMemoryDb) getCharacter(u uuid.UUID, name string) (*database.Chara
 	return nil, &database.Error{Code: database.CharacterNotFound, Message: fmt.Sprintf("Character with name %v was not found", name)}
 }
 
-func (cdb *CharMemoryDb) getMainCharacter(u uuid.UUID) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) getMainCharacter(g string, u string) (*database.Character, *database.Error) {
 	var rv *database.Character = nil
 	for _, v := range cdb.chars {
-		if v.UserId == u {
+		if v.UserId == u && v.GuildId == g {
 			if v.Main {
 				return v, nil
 			}

@@ -63,8 +63,15 @@ func SendMonitored(s *discordgo.Session, c *string, msg *string) {
 	go sendMonitored(s, c, msg)
 }
 
-func ParseUserMention(m string) (string, error) {
+func IsUserMention(m string) bool {
 	if len(m) < 4 || m[0] != '<' || m[1] != '@' || m[2] != '!' || m[len(m)-1] != '>' {
+		return false
+	}
+	return true
+}
+
+func ParseUserMention(m string) (string, error) {
+	if !IsUserMention(m) {
 		return "", errors.New("Wrong format for user name")
 	}
 

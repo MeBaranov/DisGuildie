@@ -159,6 +159,17 @@ func (dgm *DiscordGoMessage) CurSegment() string {
 	return rv
 }
 
+func (dgm *DiscordGoMessage) PeekSegment() string {
+	var rv string
+	rv, _ = utility.NextCommand(&dgm.curMsg)
+
+	return rv
+}
+
+func (dgm *DiscordGoMessage) LeftOverSegments() string {
+	return dgm.curMsg
+}
+
 func (dgm *DiscordGoMessage) MoreSegments() bool {
 	return dgm.curMsg == ""
 }

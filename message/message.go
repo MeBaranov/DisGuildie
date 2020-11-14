@@ -18,6 +18,8 @@ type Message interface {
 	GetRoleId(string) (string, error)
 
 	CurSegment() string
+	PeekSegment() string
+	LeftOverSegments() string
 	MoreSegments() bool
 
 	SendMessage(string, ...interface{})

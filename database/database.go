@@ -41,17 +41,16 @@ type GuildPermission struct {
 }
 
 type User struct {
-	UserId    uuid.UUID
-	DiscordId string
-	Guilds    map[string]*GuildPermission
+	Id     string
+	Guilds map[string]*GuildPermission
 }
 
 type Character struct {
-	CharId string
-	UserId uuid.UUID
-	Name   string
-	Main   bool
-	Body   map[string]interface{}
+	GuildId string
+	UserId  string
+	Name    string
+	Main    bool
+	Body    map[string]interface{}
 }
 
 type Role struct {
@@ -91,15 +90,15 @@ type DataProvider interface {
 	EraseUserD(d string) (*User, *Error)
 
 	AddCharacter(c *Character) (*Character, *Error)
-	GetCharacters(u uuid.UUID) ([]*Character, *Error)
-	GetMainCharacter(u uuid.UUID) (*Character, *Error)
-	GetCharacter(u uuid.UUID, n string) (*Character, *Error)
-	RenameCharacter(u uuid.UUID, old string, name string) (*Character, *Error)
-	ChangeMainCharacter(u uuid.UUID, name string) (*Character, *Error)
-	SetCharacterStat(u uuid.UUID, name string, s string, v interface{}) (*Character, *Error)
-	ChangeCharacterOwner(old uuid.UUID, name string, u uuid.UUID) (*Character, *Error)
-	RemoveCharacterStat(u uuid.UUID, name string, s string) (*Character, *Error)
-	RemoveCharacter(u uuid.UUID, name string) (*Character, *Error)
+	GetCharacters(g string, u string) ([]*Character, *Error)
+	GetMainCharacter(g string, u string) (*Character, *Error)
+	GetCharacter(g string, u string, n string) (*Character, *Error)
+	RenameCharacter(g string, u string, old string, name string) (*Character, *Error)
+	ChangeMainCharacter(g string, u string, name string) (*Character, *Error)
+	SetCharacterStat(g string, u string, name string, s string, v interface{}) (*Character, *Error)
+	ChangeCharacterOwner(g string, old string, name string, u string) (*Character, *Error)
+	RemoveCharacterStat(g string, u string, name string, s string) (*Character, *Error)
+	RemoveCharacter(g string, u string, name string) (*Character, *Error)
 
 	AddRole(r *Role) (*Role, *Error)
 	GetRole(g string, r string) (*Role, *Error)

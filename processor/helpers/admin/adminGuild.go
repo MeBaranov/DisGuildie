@@ -48,6 +48,16 @@ func (ap *AdminGuildProcessor) add(m message.Message) {
 		return
 	}
 
+	ok, err := ap.CheckGuildModificationPermissions(m, pguild.GuildId)
+	if err != nil {
+		m.SendMessage(err.Error())
+		return
+	}
+	if !ok {
+		m.SendMessage("You don't have permissions to add to this sub-guild")
+		return
+	}
+
 	g := &database.Guild{
 		Name:     gldName,
 		ParentId: pguild.GuildId,
@@ -68,9 +78,20 @@ func (ap *AdminGuildProcessor) rename(m message.Message) {
 		return
 	}
 
+	var err error
 	g, err := ap.Prov.GetGuildN(m.GuildId(), oldName)
 	if err != nil {
 		m.SendMessage("Error: %v", err.Error())
+		return
+	}
+
+	ok, err := ap.CheckGuildModificationPermissions(m, g.GuildId)
+	if err != nil {
+		m.SendMessage(err.Error())
+		return
+	}
+	if !ok {
+		m.SendMessage("You don't have permissions to add to this sub-guild")
 		return
 	}
 
@@ -90,6 +111,7 @@ func (ap *AdminGuildProcessor) move(m message.Message) {
 		return
 	}
 
+	var err error
 	g, err := ap.Prov.GetGuildN(m.GuildId(), name)
 	if err != nil {
 		m.SendMessage("Error getting guild: %v", err.Error())
@@ -104,6 +126,26 @@ func (ap *AdminGuildProcessor) move(m message.Message) {
 	}
 	if err != nil {
 		m.SendMessage("Error getting parrent guild: %v", err.Error())
+		return
+	}
+
+	ok, err := ap.CheckGuildModificationPermissions(m, g.GuildId)
+	if err != nil {
+		m.SendMessage(err.Error())
+		return
+	}
+	if !ok {
+		m.SendMessage("You don't have permissions to modify source (%v) sub-guild", name)
+		return
+	}
+
+	ok, err = ap.CheckGuildModificationPermissions(m, pguild.GuildId)
+	if err != nil {
+		m.SendMessage(err.Error())
+		return
+	}
+	if !ok {
+		m.SendMessage("You don't have permissions to modify target (%v) sub-guild", name)
 		return
 	}
 
