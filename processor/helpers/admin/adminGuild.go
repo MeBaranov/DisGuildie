@@ -1,6 +1,9 @@
 package admin
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
 	"github.com/mebaranov/disguildie/processor/helpers"
@@ -13,7 +16,7 @@ type AdminGuildProcessor struct {
 func NewAdminGuildProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	ap := &AdminGuildProcessor{}
 	ap.Prov = prov
-	ap.Funcs = map[string]func(message.Message){
+	ap.Funcs = map[string]func(message.Message) (string, error){
 		"h":      ap.help,
 		"help":   ap.help,
 		"a":      ap.add,
@@ -27,13 +30,12 @@ func NewAdminGuildProcessor(prov database.DataProvider) helpers.MessageProcessor
 	return ap
 }
 
-func (ap *AdminGuildProcessor) add(m message.Message) {
+func (ap *AdminGuildProcessor) add(m message.Message) (string, error) {
 	gldName := m.CurSegment()
 	parent := m.CurSegment()
 
 	if parent == "" || gldName == "" {
-		m.SendMessage("Malformed command. Expected sub-guild name and parent name. Received: '%v'", m.FullMessage())
-		return
+		return "", errors.New("Invalid command format")
 	}
 
 	var pguild *database.Guild
@@ -44,18 +46,15 @@ func (ap *AdminGuildProcessor) add(m message.Message) {
 		pguild, err = ap.Prov.GetGuildN(m.GuildId(), parent)
 	}
 	if err != nil {
-		m.SendMessage("Error getting parrent guild: %v", err.Error())
-		return
+		return "getting guild", err
 	}
 
 	ok, err := ap.CheckGuildModificationPermissions(m, pguild.GuildId)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "checking modification permissions", err
 	}
 	if !ok {
-		m.SendMessage("You don't have permissions to add to this sub-guild")
-		return
+		return "", errors.New("You don't have permissions to add to this sub-guild")
 	}
 
 	g := &database.Guild{
@@ -63,59 +62,51 @@ func (ap *AdminGuildProcessor) add(m message.Message) {
 		ParentId: pguild.GuildId,
 	}
 	if _, err = ap.Prov.AddGuild(g); err != nil {
-		m.SendMessage("Error creating subguild: %v", err.Error())
-		return
+		return "adding guild", err
 	}
 
-	m.SendMessage("Subguild %v registered under %v.", gldName, parent)
+	return fmt.Sprintf("Subguild %v registered under %v.", gldName, parent), nil
 }
 
-func (ap *AdminGuildProcessor) rename(m message.Message) {
+func (ap *AdminGuildProcessor) rename(m message.Message) (string, error) {
 	oldName := m.CurSegment()
 	newName := m.CurSegment()
 	if oldName == "" || newName == "" {
-		m.SendMessage("Malformed command. Expected sub-guild old name and new name. Received: '%v'", m.FullMessage())
-		return
+		return "", errors.New("Invalid command format")
 	}
 
 	var err error
 	g, err := ap.Prov.GetGuildN(m.GuildId(), oldName)
 	if err != nil {
-		m.SendMessage("Error: %v", err.Error())
-		return
+		return "getting guild", err
 	}
 
 	ok, err := ap.CheckGuildModificationPermissions(m, g.GuildId)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "checking modification permissions", err
 	}
 	if !ok {
-		m.SendMessage("You don't have permissions to add to this sub-guild")
-		return
+		return "", errors.New("You don't have permissions to add to this sub-guild")
 	}
 
 	if _, err = ap.Prov.RenameGuild(g.GuildId, newName); err != nil {
-		m.SendMessage("Error: %v", err.Error())
-		return
+		return "renaming guild", err
 	}
 
-	m.SendMessage("Guild renamed to %v", newName)
+	return fmt.Sprintf("Guild renamed to %v", newName), nil
 }
 
-func (ap *AdminGuildProcessor) move(m message.Message) {
+func (ap *AdminGuildProcessor) move(m message.Message) (string, error) {
 	name := m.CurSegment()
 	parent := m.CurSegment()
 	if name == "" || parent == "" {
-		m.SendMessage("Malformed command. Expected sub-guild name and parent name. Received: '%v'", m.FullMessage())
-		return
+		return "", errors.New("Invalid command format")
 	}
 
 	var err error
 	g, err := ap.Prov.GetGuildN(m.GuildId(), name)
 	if err != nil {
-		m.SendMessage("Error getting guild: %v", err.Error())
-		return
+		return "getting source guild", err
 	}
 
 	var pguild *database.Guild
@@ -125,97 +116,91 @@ func (ap *AdminGuildProcessor) move(m message.Message) {
 		pguild, err = ap.Prov.GetGuildN(m.GuildId(), parent)
 	}
 	if err != nil {
-		m.SendMessage("Error getting parrent guild: %v", err.Error())
-		return
+		return "getting target guild", err
 	}
 
 	ok, err := ap.CheckGuildModificationPermissions(m, g.GuildId)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "checking source mdofication permissions", err
 	}
 	if !ok {
-		m.SendMessage("You don't have permissions to modify source (%v) sub-guild", name)
-		return
+		return "", errors.New(fmt.Sprintf("You don't have permissions to modify source (%v) sub-guild", name))
 	}
 
 	ok, err = ap.CheckGuildModificationPermissions(m, pguild.GuildId)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "checking target modification pemissions", err
 	}
 	if !ok {
-		m.SendMessage("You don't have permissions to modify target (%v) sub-guild", name)
-		return
+		return "", errors.New(fmt.Sprintf("You don't have permissions to modify target (%v) sub-guild", name))
 	}
 
 	if _, err = ap.Prov.MoveGuild(g.GuildId, pguild.GuildId); err != nil {
-		m.SendMessage("Error: %v", err.Error())
-		return
+		return "moving guild", err
 	}
 
-	m.SendMessage("Guild %v moved under parent %v", name, parent)
+	return fmt.Sprintf("Guild %v moved under parent %v", name, parent), nil
 }
 
-func (ap *AdminGuildProcessor) remove(m message.Message) {
+func (ap *AdminGuildProcessor) remove(m message.Message) (string, error) {
 	name := m.CurSegment()
 	if name == "" {
-		m.SendMessage("Malformed command. Expected sub-guild name. Received: '%v'", m.FullMessage())
-		return
+		return "", errors.New("Invalid command format")
 	}
 
+	var err error
 	g, err := ap.Prov.GetGuildN(m.GuildId(), name)
 	if err != nil {
-		m.SendMessage("Error getting guild: %v", err.Error())
-		return
+		return "getting guild", err
+	}
+
+	ok, err := ap.CheckGuildModificationPermissions(m, g.GuildId)
+	if err != nil {
+		return "checking modification permissions", err
+	}
+	if !ok {
+		return "", errors.New("You don't have permissions to modify the sub-guild")
 	}
 
 	subs, err := ap.Prov.GetSubGuilds(g.GuildId)
 	if err != nil {
-		m.SendMessage("Error getting subguilds: %v", err.Error())
-		return
+		return "getting subguilds", err
 	}
 
 	users, err := ap.Prov.GetUsersInGuild(m.GuildId())
 	if err != nil {
-		m.SendMessage("Error getting users: %v", err.Error())
-		return
+		return "getting users in guild", err
 	}
 
 	for _, s := range users {
 		if perm, ok := s.Guilds[m.GuildId()]; ok {
 			if _, ok = subs[perm.GuildId]; ok {
-				_, err = ap.Prov.SetUserSubGuild(s.DiscordId, &database.GuildPermission{TopGuild: m.GuildId(), GuildId: g.ParentId})
+				_, err = ap.Prov.SetUserSubGuild(s.Id, &database.GuildPermission{TopGuild: m.GuildId(), GuildId: g.ParentId})
 				if err != nil {
-					m.SendMessage("Error moving users from subguilds: %v", err.Error())
-					return
+					return "moving users out from sub-guild", err
 				}
 			}
 		}
 	}
 
 	if _, err = ap.Prov.RemoveGuild(g.GuildId); err != nil {
-		m.SendMessage("Error removing guild: %v", err.Error())
-		return
+		return "removing sub-guild", err
 	}
 
-	m.SendMessage("Guild %v removed", name)
+	return fmt.Sprintf("Sub-guild %v removed", name), nil
 }
 
-func (ap *AdminGuildProcessor) help(m message.Message) {
+func (ap *AdminGuildProcessor) help(m message.Message) (string, error) {
 	rv := "Here's a list of guild management commands you're allowed to use:\n"
 
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		rv += "Some error happened while getting permissions: " + err.Error()
-		m.SendMessage(rv)
-		return
+		return "getting permissions", err
 	}
 
 	if perm&database.StructurePermissions == 0 {
 		rv += "Sorry, none. Ask leaders to let you do more"
-		m.SendMessage(rv)
-		return
+		return rv, nil
 	}
 
 	rv += "\t -- \"!g admin guild add <child guild name> main\" (\"!g a g a <name>\") - Add sub-guild to the main level\n"
@@ -226,5 +211,5 @@ func (ap *AdminGuildProcessor) help(m message.Message) {
 	rv += "\t -- \"!g admin guild remove <child guild name>\" (\"!g a g remove <name>\") - Remove sub-guild\n"
 	rv += "Be aware that your ability to modify structure depends on the guild you're assigned to.\n"
 
-	m.SendMessage(rv)
+	return rv, nil
 }

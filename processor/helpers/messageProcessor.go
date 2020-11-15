@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/mebaranov/disguildie/database"
@@ -10,15 +11,15 @@ import (
 )
 
 type MessageProcessor interface {
-	ProcessMessage(m message.Message)
+	ProcessMessage(m message.Message) (string, error)
 }
 
 type BaseMessageProcessor struct {
 	Prov  database.DataProvider
-	Funcs map[string]func(message.Message)
+	Funcs map[string]func(message.Message) (string, error)
 }
 
-func (ap *BaseMessageProcessor) ProcessMessage(m message.Message) {
+func (ap *BaseMessageProcessor) ProcessMessage(m message.Message) (string, error) {
 	cmd := m.PeekSegment()
 	if utility.IsUserMention(cmd) {
 		cmd = ""
@@ -28,11 +29,10 @@ func (ap *BaseMessageProcessor) ProcessMessage(m message.Message) {
 
 	f, ok := ap.Funcs[cmd]
 	if !ok {
-		m.SendMessage("Unknown command \"%v\". Use \"!g help\" or \"!g h\" for help", m.FullMessage())
-		return
+		return "", errors.New(fmt.Sprintf("Unknown command \"%v\". Use \"!g help\" or \"!g h\" for help", m.FullMessage()))
 	}
 
-	f(m)
+	return f(m)
 }
 
 func (ap *BaseMessageProcessor) CheckGuildModificationPermissions(m message.Message, gid uuid.UUID) (bool, error) {

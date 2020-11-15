@@ -2,6 +2,7 @@ package admin
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
@@ -16,7 +17,7 @@ type AdminUserProcessor struct {
 func NewAdminUserProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	ap := &AdminUserProcessor{}
 	ap.Prov = prov
-	ap.Funcs = map[string]func(message.Message){
+	ap.Funcs = map[string]func(message.Message) (string, error){
 		"h":        ap.help,
 		"help":     ap.help,
 		"r":        ap.register,
@@ -36,194 +37,136 @@ const (
 	sync
 )
 
-func (ap *AdminUserProcessor) register(m message.Message) {
-	ap.regOrSync(m, register)
+func (ap *AdminUserProcessor) register(m message.Message) (string, error) {
+	return ap.regOrSync(m, register)
 }
 
-func (ap *AdminUserProcessor) sync(m message.Message) {
-	ap.regOrSync(m, sync)
+func (ap *AdminUserProcessor) sync(m message.Message) (string, error) {
+	return ap.regOrSync(m, sync)
 }
 
-func (ap *AdminUserProcessor) remove(m message.Message) {
-	perm, err := m.AuthorPermissions()
-	if err != nil {
-		m.SendMessage("Some error happened while getting permissions: %v", err.Error())
-		return
-	}
-
-	if perm&database.CharsPermissions == 0 {
-		m.SendMessage("I'm sorry, but you don't have permissions to delete users")
-		return
-	}
-
+func (ap *AdminUserProcessor) remove(m message.Message) (string, error) {
 	u := m.CurSegment()
 
-	if m.MoreSegments() {
-		m.SendMessage("Unknown extended parameter: '%v'", m.CurSegment())
-		return
-	}
-
 	if len(m.Mentions()) != 1 {
-		m.SendMessage("Wrong command format. You should mention user to delete")
-		return
+		return "", errors.New("Invalid command format")
 	}
 
 	uid, err := utility.ParseUserMention(u)
 	if err != nil {
-		m.SendMessage("Error: %v", err.Error())
-		return
-	}
-
-	if uid != m.Mentions()[0] {
-		m.SendMessage("Error: You're doing something tricky. Mention is inconsistent. Try again, please")
-		return
+		return "parsing mention", err
 	}
 
 	ok, err := ap.CheckUserModificationPermissions(m, uid)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "checking modification permissions", err
 	}
 	if !ok {
-		m.SendMessage("You don't have permissions to delete this user")
-		return
+		return "", errors.New("You don't have permissions to delete this user")
 	}
 
 	err = ap.removeUser(uid, m.GuildId())
 	if err != nil {
-		m.SendMessage("Could not remove user: %v", err.Error())
-		return
+		return "removing user", err
 	}
 
-	m.SendMessage("User <@!%v> successfully removed", uid)
+	return fmt.Sprintf("User <@!%v> successfully removed", uid), nil
 }
 
-func (ap *AdminUserProcessor) cleanup(m message.Message) {
+func (ap *AdminUserProcessor) cleanup(m message.Message) (string, error) {
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		m.SendMessage("Some error happened while getting permissions: %v", err.Error())
-		return
+		return "getting author permissions", err
 	}
 
 	if perm&database.EditGuildCharsPerm == 0 {
-		m.SendMessage("I'm sorry, but you don't have permissions to run guild-wide user management operations")
-		return
-	}
-
-	if m.MoreSegments() {
-		m.SendMessage("Unknown extended parameter: '%v'", m.CurSegment())
-		return
+		return "", errors.New("You don't have permissions to run guild-wide user management operations")
 	}
 
 	guildies, err := m.GuildMembers()
 	if err != nil {
-		m.SendMessage("Could not get guild members: '%v'", m.CurSegment())
-		return
+		return "getting guild memebers", err
 	}
 
 	registered, err := ap.Prov.GetUsersInGuild(m.GuildId())
 	if err != nil {
-		m.SendMessage("Could not get registered members: '%v'", m.CurSegment())
-		return
+		return "getting users in guild", err
 	}
 
 	count := 0
 	for _, u := range registered {
-		if _, ok := guildies[u.DiscordId]; !ok {
-			if err = ap.removeUser(u.DiscordId, m.GuildId()); err != nil {
-				m.SendMessage("Error while deleting user: %v. Try running the command again.\nCleaned up so far: %v", err.Error(), count)
-				return
+		if _, ok := guildies[u.Id]; !ok {
+			if err = ap.removeUser(u.Id, m.GuildId()); err != nil {
+				return "deleting user", err
 			}
 			count += 1
 		}
 	}
 
-	m.SendMessage("Cleaned up %v users", count)
+	return fmt.Sprintf("Cleaned up %v users", count), nil
 }
 
-func (ap *AdminUserProcessor) assign(m message.Message) {
+func (ap *AdminUserProcessor) assign(m message.Message) (string, error) {
 	u := m.CurSegment()
 	g := m.CurSegment()
-	if u == "" || g == "" {
-		m.SendMessage("Malformed command. Expected user mention and sub-guild name (or 'main'). Received: '%v'", m.FullMessage())
+	if u == "" || g == "" || len(m.Mentions()) != 1 {
+		return "", errors.New("Invalid command format")
 	}
 
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		m.SendMessage("Some error happened while getting permissions: %v", err.Error())
-		return
+		return "getting author permissions", err
 	}
 
 	if perm&database.EditGuildCharsPerm == 0 {
-		m.SendMessage("I'm sorry, but you don't have permissions to run guild-wide user management operations")
-		return
-	}
-
-	if len(m.Mentions()) != 1 {
-		m.SendMessage("Malformed command. Expected user mention and sub-guild name (or 'main'). Received: '%v'", m.FullMessage())
-		return
+		return "", errors.New("You don't have permissions to run guild-wide user management operations")
 	}
 
 	uid, err := utility.ParseUserMention(u)
 	if err != nil {
-		m.SendMessage("Error parsing mention: %v", err.Error())
-		return
-	}
-
-	if uid != m.Mentions()[0] {
-		m.SendMessage("Error: You're doing something tricky. Mention is inconsistent. Try again, please")
-		return
+		return "parsing mention", err
 	}
 
 	guild, err := ap.Prov.GetGuildN(m.GuildId(), g)
 	if err != nil {
-		m.SendMessage("Could not get subguild: '%v'", m.CurSegment())
-		return
+		return "getting subguild", err
 	}
 
 	ok, err := ap.CheckUserModificationPermissions(m, uid)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "checking source modification permissions", err
 	}
 	if !ok {
-		m.SendMessage("You don't have permissions to assign this user")
-		return
+		return "", errors.New("You don't have permissions to assign this user")
 	}
 
 	ok, err = ap.CheckGuildModificationPermissions(m, guild.GuildId)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "checking target modification permissions", err
 	}
 	if !ok {
-		m.SendMessage("You don't have permissions to move users into this sub-guild")
-		return
+		return "", errors.New("You don't have permissions to move users into this sub-guild")
 	}
 
 	_, err = ap.Prov.SetUserSubGuild(uid, &database.GuildPermission{TopGuild: m.GuildId(), GuildId: guild.GuildId})
 	if err != nil {
-		m.SendMessage("Could not assign user: '%v'", m.CurSegment())
-		return
+		return "assigning user", err
 	}
 
-	m.SendMessage("User <@!%v> assigned to guild %v", uid, g)
+	return fmt.Sprintf("User <@!%v> assigned to guild %v", uid, g), nil
 }
 
-func (ap *AdminUserProcessor) help(m message.Message) {
+func (ap *AdminUserProcessor) help(m message.Message) (string, error) {
 	rv := "Here's a list of user management commands you're allowed to use:\n"
 
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		rv += "Some error happened while getting permissions: " + err.Error()
-		m.SendMessage(rv)
-		return
+		return "getting author permissions", err
 	}
 
 	if perm&database.CharsPermissions == 0 {
 		rv += "Sorry, none. Ask leaders to let you do more"
-		m.SendMessage(rv)
-		return
+		return rv, nil
 	}
 
 	rv += "\t -- \"!g admin user register <mention user>\" (\"!g a u r <user>\") - Register user in the system\n"
@@ -241,63 +184,46 @@ func (ap *AdminUserProcessor) help(m message.Message) {
 		rv += "\t -- \"!g admin user sync all\" (\"!g a u s all\") - Synchronize all users permissions\n"
 	}
 
-	m.SendMessage(rv)
+	return rv, nil
 }
 
-func (ap *AdminUserProcessor) regOrSync(m message.Message, action int) {
+func (ap *AdminUserProcessor) regOrSync(m message.Message, action int) (string, error) {
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		m.SendMessage("Some error happened while getting permissions: %v", err.Error())
-		return
+		return "getting permissions", err
 	}
 
 	if perm&database.CharsPermissions == 0 {
-		m.SendMessage("I'm sorry, but you don't have permissions to register or syncronize users")
-		return
+		return "", errors.New("You don't have permissions to register or syncronize users")
 	}
 
 	u := m.CurSegment()
 
-	if m.MoreSegments() {
-		m.SendMessage("Unknown extended parameter: '%v'", m.CurSegment())
-		return
-	}
-
 	if u == "all" {
 		if perm&database.EditGuildCharsPerm == 0 {
-			m.SendMessage("I'm sorry, but you don't have permissions to run guild-wide user management operations")
-			return
+			return "", errors.New("You don't have permissions to run guild-wide user management operations")
 		}
 
 		switch action {
 		case register:
-			ap.registerAllUsers(m)
+			return ap.registerAllUsers(m)
 		case sync:
-			ap.syncAllUsers(m)
+			return ap.syncAllUsers(m)
 		}
-		return
 	}
 
 	if len(m.Mentions()) != 1 {
-		m.SendMessage("Wrong command format. You should mention user to register/sync")
-		return
+		return "", errors.New("Invalid command format")
 	}
 
 	uid, err := utility.ParseUserMention(u)
 	if err != nil {
-		m.SendMessage("Error: %v", err.Error())
-		return
-	}
-
-	if uid != m.Mentions()[0] {
-		m.SendMessage("Error: You're doing something tricky. Mention is inconsistent. Try again, please")
-		return
+		return "parsing mention", err
 	}
 
 	guild, dbErr := ap.Prov.GetGuildD(m.GuildId())
 	if dbErr != nil {
-		m.SendMessage("Error: %v", dbErr.Error())
-		return
+		return "getting guilld", err
 	}
 
 	switch action {
@@ -306,62 +232,57 @@ func (ap *AdminUserProcessor) regOrSync(m message.Message, action int) {
 	case sync:
 		err = ap.syncUserId(uid, guild, m)
 	}
+
 	if err != nil {
-		m.SendMessage("Could not register user: %v", err.Error())
-		return
+		return "registering/syncing user", err
 	}
 
-	m.SendMessage("User <@!%v> successfully registered", uid)
+	return "User successfully registered/synced", nil
 }
 
-func (ap *AdminUserProcessor) registerAllUsers(m message.Message) {
-	guild, dbErr := ap.Prov.GetGuildD(m.GuildId())
-	if dbErr != nil {
-		m.SendMessage("Error: %v", dbErr.Error())
-		return
+func (ap *AdminUserProcessor) registerAllUsers(m message.Message) (string, error) {
+	var err error
+	guild, err := ap.Prov.GetGuildD(m.GuildId())
+	if err != nil {
+		return "getting guild", err
 	}
 
 	guildies, err := m.GuildMembers()
 	if err != nil {
-		m.SendMessage("Error getting guild memebers: %v", err.Error())
-		return
+		return "getting guild members", err
 	}
 
 	rv := "Users registered:\n"
 	for id, nick := range guildies {
 		if err = ap.reigsterUser(id, guild, m); err != nil {
-			rv += "\nError while adding users. Error: \n" + err.Error() + "\nPlease, run the command again to retry"
-			m.SendMessage(rv)
-			return
+			return "adding users", err
 		}
 
 		rv += nick + ", "
 	}
 
-	m.SendMessage(rv)
+	return rv, nil
 }
 
-func (ap *AdminUserProcessor) syncAllUsers(m message.Message) {
-	guild, dbErr := ap.Prov.GetGuildD(m.GuildId())
-	if dbErr != nil {
-		m.SendMessage("Error: %v", dbErr.Error())
-		return
+func (ap *AdminUserProcessor) syncAllUsers(m message.Message) (string, error) {
+	var err error
+	guild, err := ap.Prov.GetGuildD(m.GuildId())
+	if err != nil {
+		return "getting guild", err
 	}
 
-	guildies, dbErr := ap.Prov.GetUsersInGuild(guild.DiscordId)
-	if dbErr != nil {
-		m.SendMessage("Error getting guild memebers: %v", dbErr.Error())
-		return
+	guildies, err := ap.Prov.GetUsersInGuild(guild.DiscordId)
+	if err != nil {
+		return "getting users in guild", err
 	}
 
 	for _, u := range guildies {
 		if err := ap.syncUser(u, guild, m); err != nil {
-			m.SendMessage("\nError while adding users: %v\nPlease, run the command again to retry", err.Error())
-			return
+			return "adding users", err
 		}
 	}
 
-	m.SendMessage("All users permissions syncronized")
+	return "All users permissions syncronized", nil
 }
 
 func (ap *AdminUserProcessor) reigsterUser(id string, guild *database.Guild, m message.Message) error {
@@ -374,7 +295,7 @@ func (ap *AdminUserProcessor) reigsterUser(id string, guild *database.Guild, m m
 		return dbErr
 	} else {
 		dbu = &database.User{
-			DiscordId: id,
+			Id: id,
 		}
 	}
 
@@ -432,7 +353,7 @@ func (ap *AdminUserProcessor) syncUser(dbu *database.User, guild *database.Guild
 		return errors.New("User is not registered in the guild")
 	}
 
-	p, err := ap.userPermissions(dbu.DiscordId, m)
+	p, err := ap.userPermissions(dbu.Id, m)
 	if err != nil {
 		return err
 	}
@@ -442,7 +363,7 @@ func (ap *AdminUserProcessor) syncUser(dbu *database.User, guild *database.Guild
 	}
 	uperms.Permissions = p
 
-	dbu, dbErr := ap.Prov.SetUserPermissions(dbu.DiscordId, uperms)
+	dbu, dbErr := ap.Prov.SetUserPermissions(dbu.Id, uperms)
 	if dbErr != nil {
 		return dbErr
 	}

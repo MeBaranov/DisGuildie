@@ -19,8 +19,7 @@ func NewAdminProcessor(prov database.DataProvider) helpers.MessageProcessor {
 
 	ap.Prov = prov
 
-	// TODO: Check permissions in guild
-	ap.Funcs = map[string]func(message.Message){
+	ap.Funcs = map[string]func(message.Message) (string, error){
 		"h":     ap.help,
 		"help":  ap.help,
 		"u":     apu.ProcessMessage,
@@ -35,19 +34,16 @@ func NewAdminProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	return ap
 }
 
-func (ap *AdminProcessor) help(m message.Message) {
+func (ap *AdminProcessor) help(m message.Message) (string, error) {
 	rv := "Here's a list of administrative commands you're allowed to use:\n"
 
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		m.SendMessage("Some error happened while getting permissions: %v", err.Error())
-		return
+		return "getting permissions", err
 	}
 
 	if perm == 0 {
-		rv += "Sorry, none. Ask leaders to let you do more"
-		m.SendMessage(rv)
-		return
+		return rv, nil
 	}
 
 	if perm&database.StructurePermissions > 0 {
@@ -61,5 +57,5 @@ func (ap *AdminProcessor) help(m message.Message) {
 		rv += "\t-- \"!g admin role\" (\"!g a r\") - roles management\n"
 	}
 
-	m.SendMessage(rv)
+	return rv, nil
 }

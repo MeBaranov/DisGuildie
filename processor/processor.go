@@ -11,11 +11,12 @@ import (
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
 	"github.com/mebaranov/disguildie/processor/helpers/admin"
+	"github.com/mebaranov/disguildie/processor/helpers/user"
 )
 
 type Processor struct {
 	provider     database.DataProvider
-	funcs        map[string]func(message.Message)
+	funcs        map[string]func(message.Message) (string, error)
 	s            *discordgo.Session
 	rc           chan bool
 	superUser    *string
@@ -33,6 +34,8 @@ func New(
 	freeDuration time.Duration) (*Processor, error) {
 
 	admin := admin.NewAdminProcessor(prov)
+	char := user.NewCharProcessor(prov)
+
 	proc := &Processor{
 		provider:     prov,
 		rc:           make(chan bool),
@@ -41,11 +44,14 @@ func New(
 		freeDuration: freeDuration,
 	}
 
-	proc.funcs = map[string]func(message.Message){
+	proc.funcs = map[string]func(message.Message) (string, error){
 		"help":  proc.help,
 		"h":     proc.help,
 		"admin": admin.ProcessMessage,
 		"a":     admin.ProcessMessage,
+		"chars": char.ProcessMessage,
+		"char":  char.ProcessMessage,
+		"c":     char.ProcessMessage,
 	}
 
 	s, err := discordgo.New("Bot " + token)
@@ -94,24 +100,30 @@ func (proc *Processor) processMessage(m message.Message) {
 		return
 	}
 
-	f(m)
+	msg, err := f(m)
+	if err != nil {
+		m.SendMessage("Error %v: %v", msg, err.Error())
+		return
+	}
+
+	m.SendMessage(msg)
 }
 
-func (proc *Processor) help(m message.Message) {
+func (proc *Processor) help(m message.Message) (string, error) {
 	rv := "Here is a list of commands you are allowed to use:\n"
 
 	p, err := m.AuthorPermissions()
 	if err != nil {
-		rv += "Could not get your permissions. Error:\n" + err.Error()
-		m.SendMessage(rv)
-		return
+		return "getting author permissions", err
 	}
 
 	if p > 0 {
 		rv += "\t-- \"!g admin\" (\"!g a\") - administrative actions"
 	}
+	rv += "\t-- \"!g char\" (\"!g c\") - character management actions"
+	rv += "\t-- \"!g gdpr\" (\"!g g\") - GDPR-related items"
 
-	m.SendMessage(rv)
+	return rv, nil
 }
 
 func (proc *Processor) ready(s *discordgo.Session, r *discordgo.Ready) {
@@ -172,7 +184,6 @@ func (proc *Processor) tryRegisterGuild(g *discordgo.Guild) error {
 		dbg := &database.Guild{
 			DiscordId: g.ID,
 			Name:      g.Name,
-			Stats:     make(map[string]string),
 		}
 
 		_, err = proc.provider.AddGuild(dbg)

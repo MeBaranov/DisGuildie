@@ -1,9 +1,15 @@
 package user
 
 import (
+	"errors"
+	"fmt"
+	"sort"
+	"strconv"
+
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
 	"github.com/mebaranov/disguildie/processor/helpers"
+	"github.com/mebaranov/disguildie/utility"
 )
 
 type CharProcessor struct {
@@ -13,24 +19,28 @@ type CharProcessor struct {
 func NewCharProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	ap := &CharProcessor{}
 	ap.Prov = prov
-	ap.Funcs = map[string]func(message.Message){
-		"h":    ap.help,
-		"help": ap.help,
+	ap.Funcs = map[string]func(message.Message) (string, error){
+		"h":      ap.help,
+		"help":   ap.help,
+		"list":   ap.list,
+		"l":      ap.list,
+		"c":      ap.create,
+		"create": ap.create,
+		"main":   ap.main,
+		"m":      ap.main,
 	}
 	return ap
 }
 
-func (ap *CharProcessor) list(m message.Message) {
+func (ap *CharProcessor) list(m message.Message) (string, error) {
 	u, err := ap.UserOrAuthorByMention(m.CurSegment(), m)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "getting target user", err
 	}
 
 	chars, err := ap.Prov.GetCharacters(m.GuildId(), u.Id)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "getting characters", err
 	}
 
 	rv := "List of characters:\n"
@@ -42,10 +52,10 @@ func (ap *CharProcessor) list(m message.Message) {
 		rv += c.Name + "\n"
 	}
 
-	m.SendMessage(rv)
+	return rv, nil
 }
 
-func (ap *CharProcessor) create(m message.Message) {
+func (ap *CharProcessor) create(m message.Message) (string, error) {
 	ment, c := m.CurSegment(), m.CurSegment()
 
 	if c == "" {
@@ -55,28 +65,23 @@ func (ap *CharProcessor) create(m message.Message) {
 
 	u, err := ap.UserOrAuthorByMention(ment, m)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "getting target user", err
 	}
 
 	ok, err := ap.CheckUserModificationPermissions(m, u.Id)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "checking modification permissions", err
 	}
 	if !ok {
-		m.SendMessage("You don't have permissions to modify this user")
-		return
+		return "", errors.New("You don't have permissions to modify this user")
 	}
 
 	_, dbErr := ap.Prov.GetCharacter(m.GuildId(), u.Id, c)
 	if dbErr == nil {
-		m.SendMessage("User <@!%v> already have character %v", u.Id, c)
-		return
+		return "", errors.New(fmt.Sprintf("User <@!%v> already have character %v", u.Id, c))
 	}
 	if dbErr != nil && dbErr.Code != database.CharacterNotFound {
-		m.SendMessage(dbErr.Error())
-		return
+		return "getting character", dbErr
 	}
 
 	ch := database.Character{
@@ -86,14 +91,13 @@ func (ap *CharProcessor) create(m message.Message) {
 	}
 	_, err = ap.Prov.AddCharacter(&ch)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "adding character", err
 	}
 
-	m.SendMessage("Character %v added", c)
+	return fmt.Sprintf("Character %v added", c), nil
 }
 
-func (ap *CharProcessor) main(m message.Message) {
+func (ap *CharProcessor) main(m message.Message) (string, error) {
 	ment, c := m.CurSegment(), m.CurSegment()
 
 	if c == "" {
@@ -103,43 +107,303 @@ func (ap *CharProcessor) main(m message.Message) {
 
 	u, err := ap.UserOrAuthorByMention(ment, m)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "getting target user", err
 	}
 
 	ok, err := ap.CheckUserModificationPermissions(m, u.Id)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "checking modification permissions", err
 	}
 	if !ok {
-		m.SendMessage("You don't have permissions to modify this user")
-		return
+		return "", errors.New("You don't have permissions to modify this user")
 	}
 
-	_, dbErr := ap.Prov.GetCharacter(m.GuildId(), u.Id, c)
-	if dbErr != nil {
-		m.SendMessage(dbErr.Error())
-		return
+	_, err = ap.Prov.GetCharacter(m.GuildId(), u.Id, c)
+	if err != nil {
+		return "getting character", err
 	}
 
 	_, err = ap.Prov.ChangeMainCharacter(m.GuildId(), u.Id, c)
 	if err != nil {
-		m.SendMessage(err.Error())
-		return
+		return "changing main character", err
 	}
 
-	m.SendMessage("Character %v is set as main for <@!%v>", c, u.Id)
+	return fmt.Sprintf("Character %v is set as main for <@!%v>", c, u.Id), nil
 }
 
-func (ap *CharProcessor) help(m message.Message) {
+func (ap *CharProcessor) stat(m message.Message) (string, error) {
+	v1, v2, v3, v4 := m.CurSegment(), m.CurSegment(), m.CurSegment(), m.CurSegment()
+	if v3 == "" && v4 == "" {
+		if v1 != "" && utility.IsUserMention(v1) {
+			return ap.getStat(m, v1, v2)
+		}
+		if v2 == "" {
+			return ap.getStat(m, "", v1)
+		}
+
+		return ap.setStat(m, "", "", v1, v2)
+	}
+
+	if v4 != "" {
+		return ap.setStat(m, v1, v2, v3, v4)
+	}
+
+	if utility.IsUserMention(v1) {
+		return ap.setStat(m, v1, "", v2, v3)
+	}
+
+	return ap.setStat(m, "", v1, v2, v3)
+}
+
+func (ap *CharProcessor) getStat(m message.Message, ment string, char string) (string, error) {
+	u, err := ap.UserOrAuthorByMention(ment, m)
+	if err != nil {
+		return "getting target user", err
+	}
+
+	c, err := ap.Prov.GetCharacter(m.GuildId(), u.Id, char)
+	if err != nil {
+		return "getting character", err
+	}
+
+	gld, err := ap.Prov.GetGuildD(m.GuildId())
+	if err != nil {
+		return "getting guild", err
+	}
+
+	rvs := make([]string, 0, len(c.Body))
+	for n, v := range c.Body {
+		s, ok := gld.Stats[n]
+		if !ok {
+			ap.Prov.RemoveCharacterStat(c.GuildId, c.UserId, c.Name, n)
+			continue
+		}
+		switch s.Type {
+		case database.Number:
+			if _, err := v.(int); err {
+				ap.Prov.RemoveCharacterStat(c.GuildId, c.UserId, c.Name, n)
+				continue
+			}
+		case database.Str:
+			if _, err := v.(string); err {
+				ap.Prov.RemoveCharacterStat(c.GuildId, c.UserId, c.Name, n)
+				continue
+			}
+		}
+
+		rvs = append(rvs, fmt.Sprintf("\t%v:%v\n", n, v))
+	}
+
+	sort.Strings(rvs)
+	return fmt.Sprintf("Stats are:\n\tmain:%v\n\tname:%v\n%v", c.Main, c.Name, rvs), nil
+}
+
+func (ap *CharProcessor) setStat(m message.Message, ment string, char string, stat string, value string) (string, error) {
+	u, err := ap.UserOrAuthorByMention(ment, m)
+	if err != nil {
+		return "getting target user", err
+	}
+
+	ok, err := ap.CheckUserModificationPermissions(m, u.Id)
+	if err != nil {
+		return "checking modification permissions", err
+	}
+	if !ok {
+		return "", errors.New("You don't have permissions to change this user")
+	}
+
+	c, err := ap.Prov.GetCharacter(m.GuildId(), u.Id, char)
+	if err != nil {
+		return "getting character", err
+	}
+
+	gld, err := ap.Prov.GetGuildD(m.GuildId())
+	if err != nil {
+		return "getting guild", err
+	}
+
+	s, ok := gld.Stats[stat]
+	if !ok {
+		return "", errors.New(fmt.Sprintf("Stat %v is not defined in your guild", stat))
+	}
+
+	var val interface{}
+	switch s.Type {
+	case database.Number:
+		val, err = strconv.Atoi(value)
+		if err != nil {
+			return "", errors.New(fmt.Sprintf("Expected numeric value. Got %v", value))
+		}
+	case database.Str:
+		val = value
+	}
+
+	_, err = ap.Prov.SetCharacterStat(c.GuildId, c.UserId, c.Name, stat, val)
+	if err != nil {
+		return "setting character stat", err
+	}
+
+	return fmt.Sprintf("Stat %v set to %v for character %v", stat, value, c.Name), nil
+}
+
+func (ap *CharProcessor) rename(m message.Message) (string, error) {
+	ment, oldN, newN := m.CurSegment(), m.CurSegment(), m.CurSegment()
+	if !utility.IsUserMention(ment) {
+		if newN != "" {
+			return "", errors.New("Invalid command format")
+		}
+		newN = oldN
+		oldN = ment
+		ment = ""
+	}
+
+	if newN == "" {
+		newN = oldN
+		oldN = ""
+	}
+
+	u, err := ap.UserOrAuthorByMention(ment, m)
+	if err != nil {
+		return "getting target user", err
+	}
+
+	ok, err := ap.CheckUserModificationPermissions(m, u.Id)
+	if err != nil {
+		return "checking modification permissions", err
+	}
+	if !ok {
+		return "", errors.New("You don't have permissions to change this user")
+	}
+
+	c, err := ap.Prov.GetCharacter(m.GuildId(), u.Id, oldN)
+	if err != nil {
+		return "getting character", err
+	}
+
+	_, dbErr := ap.Prov.GetCharacter(m.GuildId(), u.Id, newN)
+	if dbErr == nil {
+		return "", errors.New(fmt.Sprintf("Character %v already extists", newN))
+	}
+	if dbErr.Code != database.CharacterNotFound {
+		return "getting new character", dbErr
+	}
+
+	_, err = ap.Prov.RenameCharacter(m.GuildId(), u.Id, c.Name, newN)
+	if err != nil {
+		return "renaming character", err
+	}
+
+	return fmt.Sprintf("Character %v renamed to %v", c.Name, newN), nil
+}
+
+func (ap *CharProcessor) give(m message.Message) (string, error) {
+	oldOwner, char, newOwner := m.CurSegment(), m.CurSegment(), m.CurSegment()
+	if !utility.IsUserMention(oldOwner) {
+		if newOwner != "" {
+			return "", errors.New("Invalid command format")
+		}
+		newOwner = char
+		char = oldOwner
+		oldOwner = ""
+	}
+
+	if !utility.IsUserMention(newOwner) {
+		return "", errors.New("Invalid command format")
+	}
+
+	o, err := ap.UserOrAuthorByMention(oldOwner, m)
+	if err != nil {
+		return "getting source user", err
+	}
+
+	ok, err := ap.CheckUserModificationPermissions(m, o.Id)
+	if err != nil {
+		return "checking modification permissions", err
+	}
+	if !ok {
+		return "", errors.New("You don't have permissions to change the owner")
+	}
+
+	n, err := ap.UserOrAuthorByMention(newOwner, m)
+	if err != nil {
+		return "getting target user", err
+	}
+
+	ok, err = ap.CheckUserModificationPermissions(m, n.Id)
+	if err != nil {
+		return "checking modification permissions", err
+	}
+	if !ok {
+		return "", errors.New("You don't have permissions to change target user")
+	}
+
+	c, err := ap.Prov.GetCharacter(m.GuildId(), o.Id, char)
+	if err != nil {
+		return "getting character", err
+	}
+
+	_, dbErr := ap.Prov.GetCharacter(m.GuildId(), n.Id, char)
+	if dbErr == nil {
+		return "", errors.New(fmt.Sprintf("User <@!%v> already has character %v", n.Id, char))
+	}
+	if dbErr.Code != database.CharacterNotFound {
+		return "getting new character", dbErr
+	}
+
+	_, err = ap.Prov.ChangeCharacterOwner(m.GuildId(), o.Id, c.Name, n.Id)
+	if err != nil {
+		return "changing owner", err
+	}
+
+	return fmt.Sprintf("Character %v was given to <@!%v>", c.Name, n.Id), nil
+}
+
+func (ap *CharProcessor) remove(m message.Message) (string, error) {
+	ment, char := m.CurSegment(), m.CurSegment()
+	if !utility.IsUserMention(ment) {
+		if char != "" {
+			return "", errors.New("Invalid command format")
+		}
+		char = ment
+		ment = ""
+	}
+
+	if char == "" {
+		return "", errors.New("Invalid command format")
+	}
+
+	u, err := ap.UserOrAuthorByMention(ment, m)
+	if err != nil {
+		return "getting target user", err
+	}
+
+	ok, err := ap.CheckUserModificationPermissions(m, u.Id)
+	if err != nil {
+		return "checking modification permissions", err
+	}
+	if !ok {
+		return "", errors.New("You don't have permissions to change this user")
+	}
+
+	c, err := ap.Prov.GetCharacter(m.GuildId(), u.Id, char)
+	if err != nil {
+		return "getting character", err
+	}
+
+	_, err = ap.Prov.RemoveCharacter(m.GuildId(), c.UserId, c.Name)
+	if err != nil {
+		return "removing character", err
+	}
+
+	return fmt.Sprintf("Character %v was removed", c.Name), nil
+}
+
+func (ap *CharProcessor) help(m message.Message) (string, error) {
 	rv := "Here's a list of character commands you're allowed to use:\n"
 
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		rv += "Some error happened while getting permissions: " + err.Error()
-		m.SendMessage(rv)
-		return
+		return "getting author permissions", err
 	}
 
 	rv += "\t -- \"!g chars\" (\"!g c\") - List your characters\n"
@@ -185,5 +449,5 @@ func (ap *CharProcessor) help(m message.Message) {
 	}
 	rv += "Be aware that your ability to modify other members characters depends on your subguilds.\n"
 
-	m.SendMessage(rv)
+	return rv, nil
 }

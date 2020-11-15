@@ -2,6 +2,7 @@ package admin
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
@@ -16,7 +17,7 @@ type AdminRoleProcessor struct {
 func NewAdminRoleProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	ap := &AdminRoleProcessor{}
 	ap.Prov = prov
-	ap.Funcs = map[string]func(message.Message){
+	ap.Funcs = map[string]func(message.Message) (string, error){
 		"h":    ap.help,
 		"help": ap.help,
 		"a":    ap.add,
@@ -25,35 +26,30 @@ func NewAdminRoleProcessor(prov database.DataProvider) helpers.MessageProcessor 
 	return ap
 }
 
-func (ap *AdminRoleProcessor) add(m message.Message) {
+func (ap *AdminRoleProcessor) add(m message.Message) (string, error) {
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		m.SendMessage("Some error happened while getting permissions: %v", err.Error())
-		return
+		return "getting author permissions", err
 	}
 
 	if perm&database.EditGuildStructurePerm == 0 {
-		m.SendMessage("I'm sorry, but you don't have permissions to run guild-wide structure management operations")
-		return
+		return "", errors.New("You don't have permissions to run guild-wide structure management operations")
 	}
 
 	roleStr, rid, err := ap.getRoleId(m)
 	if err != nil {
-		m.SendMessage("Could not parse role: %v", err.Error())
-		return
+		return "parsing role", err
 	}
 
 	permStr, p, err := ap.getPermission(m)
 	if err != nil {
-		m.SendMessage("Could not parse permission: %v", err.Error())
-		return
+		return "parsing permission", err
 	}
 
 	role, dbErr := ap.Prov.GetRole(m.GuildId(), rid)
 	if dbErr != nil {
 		if dbErr.Code != database.RoleNotFound {
-			m.SendMessage("Error getting role: %v", dbErr.Error())
-			return
+			return "gettomg role", dbErr
 		}
 
 		role = &database.Role{
@@ -62,127 +58,108 @@ func (ap *AdminRoleProcessor) add(m message.Message) {
 			Permissions: p,
 		}
 		if _, dbErr = ap.Prov.AddRole(role); dbErr != nil {
-			m.SendMessage("Could not add role: %v", dbErr.Error())
-			return
+			return "adding role", err
 		}
-		m.SendMessage("Permission %v added for the role %v", permStr, roleStr)
-		return
+		return fmt.Sprintf("Permission %v added for the role %v", permStr, roleStr), nil
 	}
 
 	p = p | role.Permissions
 	if p != role.Permissions {
 		if _, err = ap.Prov.SetRolePermissions(m.GuildId(), rid, p); err != nil {
-			m.SendMessage("Could not add permission: %v", err.Error())
-			return
+			return "setting role permissions", err
 		}
 	}
 
 	usrs, err := m.GuildMembersWithRole(rid)
 	if err != nil {
-		m.SendMessage("Role permissions were updated. But got error getting users: %v", err.Error())
-		return
+		return "getting users", err
 	}
 
 	for uid, _ := range usrs {
 		u, err := ap.Prov.GetUserD(uid)
 		if err != nil {
-			m.SendMessage("Error getting a user for update: %v", err.Error())
-			return
+			return "getting a user for update", err
 		}
 		if uper, ok := u.Guilds[m.GuildId()]; ok {
 			uper.Permissions |= p
 			_, err = ap.Prov.SetUserPermissions(uid, uper)
 			if err != nil {
-				m.SendMessage("Error while updating users: %v", err.Error())
-				return
+				return "updating user", err
 			}
 		}
 	}
 
-	m.SendMessage("Permission %v added for the role %v", permStr, roleStr)
+	return fmt.Sprintf("Permission %v added for the role %v", permStr, roleStr), nil
 }
 
-func (ap *AdminRoleProcessor) remove(m message.Message) {
+func (ap *AdminRoleProcessor) remove(m message.Message) (string, error) {
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		m.SendMessage("Some error happened while getting permissions: %v", err.Error())
-		return
+		return "getting author permissions", err
 	}
 
 	if perm&database.EditGuildStructurePerm == 0 {
-		m.SendMessage("I'm sorry, but you don't have permissions to run guild-wide structure management operations")
-		return
+		return "", errors.New("You don't have permissions to run guild-wide structure management operations")
 	}
 
 	roleStr, rid, err := ap.getRoleId(m)
 	if err != nil {
-		m.SendMessage("Could not parse role: %v", err.Error())
-		return
+		return "parsing role", err
 	}
 
 	permStr, p, err := ap.getPermission(m)
 	if err != nil {
-		m.SendMessage("Could not parse permission: %v", err.Error())
-		return
+		return "parsing permission", err
 	}
 
 	role, dbErr := ap.Prov.GetRole(m.GuildId(), rid)
 	if dbErr != nil {
-		m.SendMessage("Error getting role: %v", dbErr.Error())
-		return
+		return "getting role", dbErr
 	}
 
 	p = ^p & role.Permissions
 	if p != role.Permissions {
 		if _, err = ap.Prov.SetRolePermissions(m.GuildId(), rid, p); err != nil {
-			m.SendMessage("Could not add permission: %v", err.Error())
-			return
+			return "adding permission", err
 		}
 	}
 
-	m.SendMessage("Permission %v removed from the role %v", permStr, roleStr)
+	return fmt.Sprintf("Permission %v removed from the role %v", permStr, roleStr), nil
 }
 
-func (ap *AdminRoleProcessor) reset(m message.Message) {
+func (ap *AdminRoleProcessor) reset(m message.Message) (string, error) {
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		m.SendMessage("Some error happened while getting permissions: %v", err.Error())
-		return
+		return "getting author permissions", err
 	}
 
 	if perm&database.EditGuildStructurePerm == 0 {
-		m.SendMessage("I'm sorry, but you don't have permissions to run guild-wide structure management operations")
-		return
+		return "", errors.New("You don't have permissions to run guild-wide structure management operations")
 	}
 
 	roleStr, rid, err := ap.getRoleId(m)
 	if err != nil {
-		m.SendMessage("Could not parse role: %v", err.Error())
-		return
+		return "parsing role", err
 	}
 
 	if _, err = ap.Prov.RemoveRole(m.GuildId(), rid); err != nil {
-		m.SendMessage("Error removing role: %v", err.Error())
-		return
+		return "removing role", err
 	}
 
-	m.SendMessage("Permissions for the role %v were reset", roleStr)
+	return fmt.Sprintf("Permissions for the role %v were reset", roleStr), nil
 }
 
-func (ap *AdminRoleProcessor) help(m message.Message) {
+func (ap *AdminRoleProcessor) help(m message.Message) (string, error) {
 	rv := "Here's a list of role management commands you're allowed to use:\n"
 
 	perm, err := m.AuthorPermissions()
 	if err != nil {
-		rv += "Some error happened while getting permissions: " + err.Error()
-		m.SendMessage(rv)
-		return
+		return "getting permissions", err
 	}
 
 	if perm&database.EditGuildStructurePerm == 0 {
 		rv += "Sorry, none. Ask leaders to let you do more"
-		m.SendMessage(rv)
-		return
+		return rv, nil
 	}
 
 	rv += "\t -- \"!g admin role add <role> <permission>\" (\"!g a r a <role> <permission>\") - Add permission to a role\n"
@@ -199,7 +176,7 @@ func (ap *AdminRoleProcessor) help(m message.Message) {
 	rv += "-- \"GuildEditGuild\" (\"gg\") - lets role members edit structure of the entire guild"
 	rv += "Notice that last two permissions grant group-wide operations access. Like this one."
 
-	m.SendMessage(rv)
+	return rv, nil
 }
 
 func (ap *AdminRoleProcessor) getRoleId(m message.Message) (string, string, error) {
