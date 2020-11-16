@@ -97,6 +97,7 @@ type DataProvider interface {
 	GetCharacters(g string, u string) ([]*Character, *Error)
 	GetCharactersSorted(g string, s string, t int, asc bool, limit int) ([]*Character, *Error)
 	GetCharactersOutdated(g string, v int) ([]*Character, *Error)
+	GetCharactersByName(g string, n string) ([]*Character, *Error)
 	GetMainCharacter(g string, u string) (*Character, *Error)
 	GetCharacter(g string, u string, n string) (*Character, *Error)
 	RenameCharacter(g string, u string, old string, name string) (*Character, *Error)

@@ -28,23 +28,58 @@ func main() {
 	var (
 		token     string
 		superUser string
+		owner     string
 		price     int
 		duration  int
+		link      string
 	)
 
 	flag.StringVar(&token, "t", "", "Bot Token")
 	flag.StringVar(&superUser, "su", "", "Super User")
-	flag.IntVar(&price, "p", 1000, "Price (Cents)")
-	flag.IntVar(&duration, "d", 30, "Free trial duration (days)")
+	flag.StringVar(&owner, "o", "", "Owner discord")
+	flag.IntVar(&price, "p", -1, "Price (Cents)")
+	flag.IntVar(&duration, "d", -1, "Free trial duration (days)")
+	flag.StringVar(&link, "l", "", "Payment link template")
 	flag.Parse()
 
 	if token == "" {
 		token = os.Getenv("BOT_TOKEN")
-
-		if token == "" {
-			fmt.Println("No token provided. Please run this app with \"-t <bot token>\" or with BOT_TOKEN environment variable set")
-			return
+	}
+	if superUser == "" {
+		superUser = os.Getenv("BOT_SUPER_USER")
+	}
+	if owner == "" {
+		owner = os.Getenv("BOT_OWNER")
+	}
+	if link == "" {
+		link = os.Getenv("BOT_PAYMENT_LINK")
+	}
+	if price == -1 {
+		tmp := os.Getenv("BOT_PRICE")
+		var err error
+		if tmp != "" {
+			if price, err = strconv.Atoi(tmp); err != nil {
+				fmt.Println("Could not parse price:", tmp, ". Error:", err.Error())
+			}
+		} else {
+			price = 1000
 		}
+	}
+	if duration == -1 {
+		tmp := os.Getenv("BOT_FREE_DURATION")
+		var err error
+		if tmp != "" {
+			if duration, err = strconv.Atoi(tmp); err != nil {
+				fmt.Println("Could not parse duration:", tmp, ". Error:", err.Error())
+			}
+		} else {
+			duration = 30
+		}
+	}
+
+	if token == "" {
+		fmt.Println("No token provided. Please run this app with \"-t <bot token>\" or with BOT_TOKEN environment variable set")
+		return
 	}
 
 	dataProvider := memory.NewMemoryDb()
@@ -60,7 +95,7 @@ func main() {
 		return
 	}
 
-	p, err := processor.New(dataProvider, token, discordgo.MakeIntent(intent), timeout, &superUser, price, h)
+	p, err := processor.New(dataProvider, token, discordgo.MakeIntent(intent), timeout, &superUser, price, h, owner, link)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

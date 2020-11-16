@@ -122,6 +122,18 @@ func (cdb *CharMemoryDb) GetCharactersOutdated(g string, v int) ([]*database.Cha
 	return rv, nil
 }
 
+func (cdb *CharMemoryDb) GetCharactersByName(g string, n string) ([]*database.Character, *database.Error) {
+	rv := make([]*database.Character, 0, 600)
+	for _, c := range cdb.chars {
+		if c.GuildId == g && c.Name == n {
+			tmp := *c
+			rv = append(rv, &tmp)
+		}
+	}
+
+	return rv, nil
+}
+
 func (cdb *CharMemoryDb) GetMainCharacter(g string, u string) (*database.Character, *database.Error) {
 	rv, err := cdb.getMainCharacter(g, u)
 	if err != nil {

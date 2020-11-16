@@ -3,6 +3,7 @@ package helpers
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mebaranov/disguildie/database"
@@ -26,10 +27,11 @@ func (ap *BaseMessageProcessor) ProcessMessage(m message.Message) (string, error
 	} else {
 		cmd = m.CurSegment()
 	}
+	cmd = strings.ToLower(cmd)
 
 	f, ok := ap.Funcs[cmd]
 	if !ok {
-		return "", errors.New(fmt.Sprintf("Unknown command \"%v\". Use \"!g help\" or \"!g h\" for help", m.FullMessage()))
+		return "", errors.New(fmt.Sprintf("Unknown command \"%v\". Use \"!g help\" (\"!g h\") for help", m.FullMessage()))
 	}
 
 	return f(m)
