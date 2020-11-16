@@ -3,8 +3,6 @@ package user
 import (
 	"errors"
 	"fmt"
-	"sort"
-	"strconv"
 
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
@@ -22,37 +20,12 @@ func NewCharProcessor(prov database.DataProvider) helpers.MessageProcessor {
 	ap.Funcs = map[string]func(message.Message) (string, error){
 		"h":      ap.help,
 		"help":   ap.help,
-		"list":   ap.list,
-		"l":      ap.list,
 		"c":      ap.create,
 		"create": ap.create,
 		"main":   ap.main,
 		"m":      ap.main,
 	}
 	return ap
-}
-
-func (ap *CharProcessor) list(m message.Message) (string, error) {
-	u, err := ap.UserOrAuthorByMention(m.CurSegment(), m)
-	if err != nil {
-		return "getting target user", err
-	}
-
-	chars, err := ap.Prov.GetCharacters(m.GuildId(), u.Id)
-	if err != nil {
-		return "getting characters", err
-	}
-
-	rv := "List of characters:\n"
-	for _, c := range chars {
-		rv += "\t"
-		if c.Main {
-			rv += "[Main] "
-		}
-		rv += c.Name + "\n"
-	}
-
-	return rv, nil
 }
 
 func (ap *CharProcessor) create(m message.Message) (string, error) {
@@ -66,6 +39,11 @@ func (ap *CharProcessor) create(m message.Message) (string, error) {
 	u, err := ap.UserOrAuthorByMention(ment, m)
 	if err != nil {
 		return "getting target user", err
+	}
+
+	gld, err := ap.Prov.GetGuildD(m.GuildId())
+	if err != nil {
+		return "getting guild", err
 	}
 
 	ok, err := ap.CheckUserModificationPermissions(m, u.Id)
@@ -84,10 +62,24 @@ func (ap *CharProcessor) create(m message.Message) (string, error) {
 		return "getting character", dbErr
 	}
 
+	stats := make(map[string]interface{})
+	for _, s := range gld.Stats {
+		switch s.Type {
+		case database.Number:
+			stats[s.ID] = 0
+		case database.Str:
+			stats[s.ID] = ""
+		default:
+			return "", errors.New("Undefined stat type for " + s.ID)
+		}
+	}
+
 	ch := database.Character{
-		UserId:  u.Id,
-		GuildId: m.GuildId(),
-		Name:    c,
+		UserId:      u.Id,
+		GuildId:     m.GuildId(),
+		Name:        c,
+		Body:        stats,
+		StatVersion: gld.StatVersion,
 	}
 	_, err = ap.Prov.AddCharacter(&ch)
 	if err != nil {
@@ -129,121 +121,6 @@ func (ap *CharProcessor) main(m message.Message) (string, error) {
 	}
 
 	return fmt.Sprintf("Character %v is set as main for <@!%v>", c, u.Id), nil
-}
-
-func (ap *CharProcessor) stat(m message.Message) (string, error) {
-	v1, v2, v3, v4 := m.CurSegment(), m.CurSegment(), m.CurSegment(), m.CurSegment()
-	if v3 == "" && v4 == "" {
-		if v1 != "" && utility.IsUserMention(v1) {
-			return ap.getStat(m, v1, v2)
-		}
-		if v2 == "" {
-			return ap.getStat(m, "", v1)
-		}
-
-		return ap.setStat(m, "", "", v1, v2)
-	}
-
-	if v4 != "" {
-		return ap.setStat(m, v1, v2, v3, v4)
-	}
-
-	if utility.IsUserMention(v1) {
-		return ap.setStat(m, v1, "", v2, v3)
-	}
-
-	return ap.setStat(m, "", v1, v2, v3)
-}
-
-func (ap *CharProcessor) getStat(m message.Message, ment string, char string) (string, error) {
-	u, err := ap.UserOrAuthorByMention(ment, m)
-	if err != nil {
-		return "getting target user", err
-	}
-
-	c, err := ap.Prov.GetCharacter(m.GuildId(), u.Id, char)
-	if err != nil {
-		return "getting character", err
-	}
-
-	gld, err := ap.Prov.GetGuildD(m.GuildId())
-	if err != nil {
-		return "getting guild", err
-	}
-
-	rvs := make([]string, 0, len(c.Body))
-	for n, v := range c.Body {
-		s, ok := gld.Stats[n]
-		if !ok {
-			ap.Prov.RemoveCharacterStat(c.GuildId, c.UserId, c.Name, n)
-			continue
-		}
-		switch s.Type {
-		case database.Number:
-			if _, err := v.(int); err {
-				ap.Prov.RemoveCharacterStat(c.GuildId, c.UserId, c.Name, n)
-				continue
-			}
-		case database.Str:
-			if _, err := v.(string); err {
-				ap.Prov.RemoveCharacterStat(c.GuildId, c.UserId, c.Name, n)
-				continue
-			}
-		}
-
-		rvs = append(rvs, fmt.Sprintf("\t%v:%v\n", n, v))
-	}
-
-	sort.Strings(rvs)
-	return fmt.Sprintf("Stats are:\n\tmain:%v\n\tname:%v\n%v", c.Main, c.Name, rvs), nil
-}
-
-func (ap *CharProcessor) setStat(m message.Message, ment string, char string, stat string, value string) (string, error) {
-	u, err := ap.UserOrAuthorByMention(ment, m)
-	if err != nil {
-		return "getting target user", err
-	}
-
-	ok, err := ap.CheckUserModificationPermissions(m, u.Id)
-	if err != nil {
-		return "checking modification permissions", err
-	}
-	if !ok {
-		return "", errors.New("You don't have permissions to change this user")
-	}
-
-	c, err := ap.Prov.GetCharacter(m.GuildId(), u.Id, char)
-	if err != nil {
-		return "getting character", err
-	}
-
-	gld, err := ap.Prov.GetGuildD(m.GuildId())
-	if err != nil {
-		return "getting guild", err
-	}
-
-	s, ok := gld.Stats[stat]
-	if !ok {
-		return "", errors.New(fmt.Sprintf("Stat %v is not defined in your guild", stat))
-	}
-
-	var val interface{}
-	switch s.Type {
-	case database.Number:
-		val, err = strconv.Atoi(value)
-		if err != nil {
-			return "", errors.New(fmt.Sprintf("Expected numeric value. Got %v", value))
-		}
-	case database.Str:
-		val = value
-	}
-
-	_, err = ap.Prov.SetCharacterStat(c.GuildId, c.UserId, c.Name, stat, val)
-	if err != nil {
-		return "setting character stat", err
-	}
-
-	return fmt.Sprintf("Stat %v set to %v for character %v", stat, value, c.Name), nil
 }
 
 func (ap *CharProcessor) rename(m message.Message) (string, error) {
@@ -406,9 +283,6 @@ func (ap *CharProcessor) help(m message.Message) (string, error) {
 		return "getting author permissions", err
 	}
 
-	rv += "\t -- \"!g chars\" (\"!g c\") - List your characters\n"
-	rv += "\t -- \"!g chars <mention user>\" (\"!g c <mention>\") - List users characters\n"
-
 	rv += "\t -- \"!g char create <char name>\" (\"!g c c <name>\") - Create your character\n"
 	if perm&database.CharsPermissions != 0 {
 		rv += "\t -- \"!g char create <mention user> <char name>\" (\"!g c c <mention> <name>\") - Create a character for user\n"
@@ -417,18 +291,6 @@ func (ap *CharProcessor) help(m message.Message) (string, error) {
 	rv += "\t -- \"!g char main <char name>\" (\"!g c m <name>\") - Set main character for yourself\n"
 	if perm&database.CharsPermissions != 0 {
 		rv += "\t -- \"!g char main <mention user> <char name>\" (\"!g c m <mention> <name>\") - Set main character for a user\n"
-	}
-
-	rv += "\t -- \"!g char stat\" (\"!g c s\") - Get stats for your main character\n"
-	rv += "\t -- \"!g char stat <char name>\" (\"!g c s <name>\") - Get stats for your character\n"
-	rv += "\t -- \"!g char stat <mention user>\" (\"!g c s <mention>\") - Get stats for users main character\n"
-	rv += "\t -- \"!g char stat <mention user> <char name>\" (\"!g c s <mention> <name>\") - Get stats for users character\n"
-
-	rv += "\t -- \"!g char stat <stat name> <stat value>\" (\"!g c s <stat name> <stat value>\") - Set stat for your main character\n"
-	rv += "\t -- \"!g char stat <char name> <stat name> <stat value>\" (\"!g c s <char name> <stat name> <stat value>\") - Set stat for your character\n"
-	if perm&database.CharsPermissions != 0 {
-		rv += "\t -- \"!g char stat <mention user> <stat name> <stat value>\" (\"!g c s <mention user> <stat name> <stat value>\") - Set stat for other users main character\n"
-		rv += "\t -- \"!g char stat <mention user> <char name> <stat name> <stat value>\" (\"!g c s <mention user> <char name> <stat name> <stat value>\") - Set stat for other users character\n"
 	}
 
 	rv += "\t -- \"!g char rename <new name>\" (\"!g c n <new name>\") - Change name of your main character\n"

@@ -69,6 +69,37 @@ func (ap *AdminStatsProcessor) add(m message.Message) (string, error) {
 	return fmt.Sprintf("Stat %v with type %v was added.", n, t), nil
 }
 
+func (ap *AdminStatsProcessor) main(m message.Message) (string, error) {
+	perm, err := m.AuthorPermissions()
+	if err != nil {
+		return "getting author permissions", err
+	}
+
+	if perm&database.EditGuildStructurePerm == 0 {
+		return "", errors.New("You don't have permissions to do guild-wide structure modifications.")
+	}
+
+	n := m.CurSegment()
+	if n == "" {
+		return "", errors.New("Invalid command format")
+	}
+
+	g, err := ap.Prov.GetGuildD(m.GuildId())
+	if err != nil {
+		return "getting guild", err
+	}
+
+	if _, ok := g.Stats[n]; !ok {
+		return "", errors.New(fmt.Sprintf("Stat %v does not exist in the guild", n))
+	}
+
+	if _, err := ap.Prov.SetDefaultGuildStat(g.GuildId, n); err != nil {
+		return "setting default stat", err
+	}
+
+	return fmt.Sprintf("Stat %v was set as default.", n), nil
+}
+
 func (ap *AdminStatsProcessor) remove(m message.Message) (string, error) {
 	perm, err := m.AuthorPermissions()
 	if err != nil {
@@ -138,6 +169,7 @@ func (ap *AdminStatsProcessor) help(m message.Message) (string, error) {
 	rv += "Stats are identified by name. Stat type can be either \"int\" for numbers or \"str\" for everything else"
 	rv += "\t -- \"!g admin stats add <statName> <statType> <description>\" (\"!g a s a <statName> <statType> <description>\") - Add a stat with description\n"
 	rv += "\t -- \"!g admin stats add <statName> <statType>\" (\"!g a s a <statName> <statType>\") - Add a stat without description\n"
+	rv += "\t -- \"!g admin stats main <statName>\" (\"!g a s m <statName>\") - Set stat as main\n"
 	rv += "\t -- \"!g admin stats remove <statName>\" (\"!g a s r <statName>\") - Remove a stat (notice that it will not be removed from existing characters data)\n"
 	rv += "\t -- \"!g admin stats reset\" (\"!g a s reset\") - Remove all stats that were set\n"
 

@@ -35,6 +35,9 @@ func New(
 
 	admin := admin.NewAdminProcessor(prov)
 	char := user.NewCharProcessor(prov)
+	_ = char
+	list := user.NewListProcessor(prov)
+	stats := user.NewStatsProcessor(prov)
 
 	proc := &Processor{
 		provider:     prov,
@@ -49,9 +52,10 @@ func New(
 		"h":     proc.help,
 		"admin": admin.ProcessMessage,
 		"a":     admin.ProcessMessage,
-		"chars": char.ProcessMessage,
-		"char":  char.ProcessMessage,
-		"c":     char.ProcessMessage,
+		"list":  list.ProcessMessage,
+		"l":     list.ProcessMessage,
+		"stat":  stats.ProcessMessage,
+		"s":     stats.ProcessMessage,
 	}
 
 	s, err := discordgo.New("Bot " + token)
@@ -118,10 +122,14 @@ func (proc *Processor) help(m message.Message) (string, error) {
 	}
 
 	if p > 0 {
-		rv += "\t-- \"!g admin\" (\"!g a\") - administrative actions"
+		rv += "\t-- \"!g admin\" (\"!g a\") - administrative"
 	}
-	rv += "\t-- \"!g char\" (\"!g c\") - character management actions"
-	rv += "\t-- \"!g gdpr\" (\"!g g\") - GDPR-related items"
+	rv += "\t-- \"!g char\" (\"!g c\") - character management"
+	rv += "\t-- \"!g list\" (\"!g l\") - list characters"
+	rv += "\t-- \"!g stat\" (\"!g s\") - stats management"
+	rv += "\t-- \"!g top\" (\"!g top\") - guild tops"
+	rv += "\t-- \"!g hierarchy\" (\"!g h\") - sub-guilds structure"
+	rv += "\t-- \"!g gdpr\" - GDPR-related"
 
 	return rv, nil
 }

@@ -2,6 +2,7 @@ package memory
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/mebaranov/disguildie/database"
@@ -32,8 +33,88 @@ func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Characte
 func (cdb *CharMemoryDb) GetCharacters(g string, u string) ([]*database.Character, *database.Error) {
 	rv := make([]*database.Character, 0, 10)
 	for _, v := range cdb.chars {
-		if v.UserId == u {
+		if v.UserId == u && v.GuildId == g {
 			tmp := *v
+			rv = append(rv, &tmp)
+		}
+	}
+
+	return rv, nil
+}
+
+func (cdb *CharMemoryDb) GetCharactersSorted(g string, s string, t int, asc bool, limit int) ([]*database.Character, *database.Error) {
+	rv := make([]*database.Character, 0, 600)
+	for _, v := range cdb.chars {
+		if v.GuildId == g {
+			tmp := *v
+			rv = append(rv, &tmp)
+		}
+	}
+
+	var f func(i int, j int) bool
+	switch t {
+	case database.Number:
+		f = func(i int, j int) bool {
+			av, ok := rv[i].Body[s]
+			if !ok {
+				return !asc
+			}
+			bv, ok := rv[j].Body[s]
+			if !ok {
+				return asc
+			}
+
+			ai, ok := av.(int)
+			if !ok {
+				return !asc
+			}
+
+			bi, ok := bv.(int)
+			if !ok {
+				return asc
+			}
+
+			return (asc && ai < bi) || (!asc && ai > bi)
+		}
+	case database.Str:
+		f = func(i int, j int) bool {
+			av, ok := rv[i].Body[s]
+			if !ok {
+				return !asc
+			}
+			bv, ok := rv[j].Body[s]
+			if !ok {
+				return asc
+			}
+
+			ai, ok := av.(string)
+			if !ok {
+				return !asc
+			}
+
+			bi, ok := bv.(string)
+			if !ok {
+				return asc
+			}
+
+			return (asc && ai < bi) || (!asc && ai > bi)
+		}
+	default:
+		return nil, &database.Error{Code: database.UnknownStatType, Message: "Stat type for " + s + " is not defined"}
+	}
+
+	sort.Slice(rv, f)
+	if limit > 0 {
+		rv = rv[:limit]
+	}
+	return rv, nil
+}
+
+func (cdb *CharMemoryDb) GetCharactersOutdated(g string, v int) ([]*database.Character, *database.Error) {
+	rv := make([]*database.Character, 0, 600)
+	for _, c := range cdb.chars {
+		if c.GuildId == g && c.StatVersion < v {
+			tmp := *c
 			rv = append(rv, &tmp)
 		}
 	}
@@ -111,6 +192,60 @@ func (cdb *CharMemoryDb) SetCharacterStat(g string, u string, name string, s str
 		c.Body = make(map[string]interface{})
 	}
 	c.Body[s] = v
+
+	tmp := *c
+	return &tmp, nil
+}
+
+func (cdb *CharMemoryDb) SetCharacterStatVersion(g string, u string, name string, stats map[string]*database.Stat, version int) (*database.Character, *database.Error) {
+	c, err := cdb.getCharacter(g, u, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.Body == nil {
+		c.Body = make(map[string]interface{})
+	} else {
+		rm := make([]string, 0, len(c.Body))
+		for k, v := range c.Body {
+			s, ok := stats[k]
+			if !ok {
+				rm = append(rm, k)
+				continue
+			}
+
+			switch s.Type {
+			case database.Number:
+				_, ok = v.(int)
+			case database.Str:
+				_, ok = v.(string)
+			default:
+				return nil, &database.Error{Code: database.UnknownStatType, Message: fmt.Sprintf("Stat type for %v is not defined", s.ID)}
+			}
+			if !ok {
+				rm = append(rm, k)
+				continue
+			}
+		}
+
+		for _, s := range rm {
+			delete(c.Body, s)
+		}
+	}
+
+	for _, s := range stats {
+		if _, ok := c.Body[s.ID]; !ok {
+			switch s.Type {
+			case database.Number:
+				c.Body[s.ID] = 0
+			case database.Str:
+				c.Body[s.ID] = ""
+			default:
+				return nil, &database.Error{Code: database.UnknownStatType, Message: fmt.Sprintf("Stat type for %v is not defined", s.ID)}
+			}
+		}
+	}
+	c.StatVersion = version
 
 	tmp := *c
 	return &tmp, nil

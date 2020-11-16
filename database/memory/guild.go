@@ -54,6 +54,7 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, *databas
 	g.GuildId = uuid.New()
 	if g.DiscordId != "" {
 		g.TopLevelParentId = g.GuildId
+		g.StatVersion = -1
 		gdb.guildsD[g.DiscordId] = g
 	}
 	gdb.guilds[g.GuildId] = g
@@ -222,9 +223,6 @@ func (gdb *GuildMemoryDb) RemoveGuildD(d string) (*database.Guild, *database.Err
 }
 
 func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, s *database.Stat) (*database.Guild, *database.Error) {
-	gdb.mux.Lock()
-	defer gdb.mux.Unlock()
-
 	guild, ok := gdb.guilds[g]
 	if !ok {
 		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
@@ -245,9 +243,29 @@ func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, s *database.Stat) (*database
 
 	if guild.Stats == nil {
 		guild.Stats = make(map[string]*database.Stat)
+		guild.DefaultStat = s.ID
 	}
 	tmpStat := *s
 	guild.Stats[s.ID] = &tmpStat
+	guild.StatVersion += 1
+	tmp := *guild
+	return &tmp, nil
+}
+
+func (gdb *GuildMemoryDb) SetDefaultGuildStat(g uuid.UUID, sn string) (*database.Guild, *database.Error) {
+	guild, ok := gdb.guilds[g]
+	if !ok {
+		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
+	}
+	if guild.DiscordId == "" {
+		return nil, &database.Error{Code: database.GuildLevelError, Message: "Only top-level guild stats are supported right now"}
+	}
+
+	if _, ok := guild.Stats[sn]; !ok {
+		return nil, &database.Error{Code: database.StatNotFound, Message: "Could not find stat with name " + sn}
+	}
+
+	guild.DefaultStat = sn
 	tmp := *guild
 	return &tmp, nil
 }
@@ -268,9 +286,19 @@ func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guil
 		return nil, &database.Error{Code: database.StatNotFound, Message: "Stat was not found"}
 	}
 
-	if guild.Stats != nil {
-		delete(guild.Stats, n)
+	delete(guild.Stats, n)
+	if n == guild.DefaultStat {
+		if len(guild.Stats) == 0 {
+			guild.DefaultStat = ""
+		} else {
+			// Oh my, what a hack
+			for n, _ := range guild.Stats {
+				guild.DefaultStat = n
+				break
+			}
+		}
 	}
+	guild.StatVersion += 1
 	tmp := *guild
 	return &tmp, nil
 }
@@ -288,6 +316,7 @@ func (gdb *GuildMemoryDb) RemoveAllGuildStats(g uuid.UUID) (*database.Guild, *da
 	}
 
 	guild.Stats = nil
+	guild.StatVersion += 1
 	tmp := *guild
 	return &tmp, nil
 }
