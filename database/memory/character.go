@@ -13,7 +13,7 @@ type CharMemoryDb struct {
 	mux   sync.Mutex
 }
 
-func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Character, error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
@@ -30,7 +30,7 @@ func (cdb *CharMemoryDb) AddCharacter(c *database.Character) (*database.Characte
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) GetCharacters(g string, u string) ([]*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) GetCharacters(g string, u string) ([]*database.Character, error) {
 	rv := make([]*database.Character, 0, 10)
 	for _, v := range cdb.chars {
 		if v.UserId == u && v.GuildId == g {
@@ -42,7 +42,7 @@ func (cdb *CharMemoryDb) GetCharacters(g string, u string) ([]*database.Characte
 	return rv, nil
 }
 
-func (cdb *CharMemoryDb) GetCharactersSorted(g string, s string, t int, asc bool, limit int) ([]*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) GetCharactersSorted(g string, s string, t int, asc bool, limit int) ([]*database.Character, error) {
 	rv := make([]*database.Character, 0, 600)
 	for _, v := range cdb.chars {
 		if v.GuildId == g {
@@ -110,7 +110,7 @@ func (cdb *CharMemoryDb) GetCharactersSorted(g string, s string, t int, asc bool
 	return rv, nil
 }
 
-func (cdb *CharMemoryDb) GetCharactersOutdated(g string, v int) ([]*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) GetCharactersOutdated(g string, v int) ([]*database.Character, error) {
 	rv := make([]*database.Character, 0, 600)
 	for _, c := range cdb.chars {
 		if c.GuildId == g && c.StatVersion < v {
@@ -122,7 +122,7 @@ func (cdb *CharMemoryDb) GetCharactersOutdated(g string, v int) ([]*database.Cha
 	return rv, nil
 }
 
-func (cdb *CharMemoryDb) GetCharactersByName(g string, n string) ([]*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) GetCharactersByName(g string, n string) ([]*database.Character, error) {
 	rv := make([]*database.Character, 0, 600)
 	for _, c := range cdb.chars {
 		if c.GuildId == g && c.Name == n {
@@ -134,7 +134,7 @@ func (cdb *CharMemoryDb) GetCharactersByName(g string, n string) ([]*database.Ch
 	return rv, nil
 }
 
-func (cdb *CharMemoryDb) GetMainCharacter(g string, u string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) GetMainCharacter(g string, u string) (*database.Character, error) {
 	rv, err := cdb.getMainCharacter(g, u)
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func (cdb *CharMemoryDb) GetMainCharacter(g string, u string) (*database.Charact
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) GetCharacter(g string, u string, name string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) GetCharacter(g string, u string, name string) (*database.Character, error) {
 	rv, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ func (cdb *CharMemoryDb) GetCharacter(g string, u string, name string) (*databas
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) RenameCharacter(g string, u string, old string, name string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) RenameCharacter(g string, u string, old string, name string) (*database.Character, error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
@@ -177,7 +177,7 @@ func (cdb *CharMemoryDb) RenameCharacter(g string, u string, old string, name st
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) ChangeMainCharacter(g string, u string, name string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) ChangeMainCharacter(g string, u string, name string) (*database.Character, error) {
 	c, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
@@ -194,7 +194,7 @@ func (cdb *CharMemoryDb) ChangeMainCharacter(g string, u string, name string) (*
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) SetCharacterStat(g string, u string, name string, s string, v interface{}) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) SetCharacterStat(g string, u string, name string, s string, v interface{}) (*database.Character, error) {
 	c, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
@@ -209,7 +209,7 @@ func (cdb *CharMemoryDb) SetCharacterStat(g string, u string, name string, s str
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) SetCharacterStatVersion(g string, u string, name string, stats map[string]*database.Stat, version int) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) SetCharacterStatVersion(g string, u string, name string, stats map[string]*database.Stat, version int) (*database.Character, error) {
 	c, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
@@ -263,7 +263,7 @@ func (cdb *CharMemoryDb) SetCharacterStatVersion(g string, u string, name string
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) ChangeCharacterOwner(g string, old string, name string, u string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) ChangeCharacterOwner(g string, old string, name string, u string) (*database.Character, error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
@@ -286,7 +286,7 @@ func (cdb *CharMemoryDb) ChangeCharacterOwner(g string, old string, name string,
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) RemoveCharacterStat(g string, u string, name string, s string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) RemoveCharacterStat(g string, u string, name string, s string) (*database.Character, error) {
 	c, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
@@ -302,7 +302,7 @@ func (cdb *CharMemoryDb) RemoveCharacterStat(g string, u string, name string, s 
 	return &tmp, nil
 }
 
-func (cdb *CharMemoryDb) RemoveCharacter(g string, u string, name string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) RemoveCharacter(g string, u string, name string) (*database.Character, error) {
 	cdb.mux.Lock()
 	defer cdb.mux.Unlock()
 
@@ -321,7 +321,7 @@ func getCharacterId(g string, u string, name string) string {
 	return fmt.Sprintf("%v:%v:%v", g, u, name)
 }
 
-func (cdb *CharMemoryDb) getCharacter(g string, u string, name string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) getCharacter(g string, u string, name string) (*database.Character, error) {
 	if name == "" {
 		return cdb.getMainCharacter(g, u)
 	}
@@ -334,7 +334,7 @@ func (cdb *CharMemoryDb) getCharacter(g string, u string, name string) (*databas
 	return nil, &database.Error{Code: database.CharacterNotFound, Message: fmt.Sprintf("Character with name %v was not found", name)}
 }
 
-func (cdb *CharMemoryDb) getMainCharacter(g string, u string) (*database.Character, *database.Error) {
+func (cdb *CharMemoryDb) getMainCharacter(g string, u string) (*database.Character, error) {
 	var rv *database.Character = nil
 	for _, v := range cdb.chars {
 		if v.UserId == u && v.GuildId == g {

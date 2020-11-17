@@ -12,7 +12,7 @@ type RoleMemoryDb struct {
 	mux   sync.Mutex
 }
 
-func (rdb *RoleMemoryDb) AddRole(r *database.Role) (*database.Role, *database.Error) {
+func (rdb *RoleMemoryDb) AddRole(r *database.Role) (*database.Role, error) {
 	rdb.mux.Lock()
 	defer rdb.mux.Unlock()
 
@@ -29,7 +29,7 @@ func (rdb *RoleMemoryDb) AddRole(r *database.Role) (*database.Role, *database.Er
 	return &tmp, nil
 }
 
-func (rdb *RoleMemoryDb) GetRole(g string, r string) (*database.Role, *database.Error) {
+func (rdb *RoleMemoryDb) GetRole(g string, r string) (*database.Role, error) {
 	id := getRoleId(g, r)
 	if r, ok := rdb.roles[id]; ok {
 		tmp := *r
@@ -39,7 +39,7 @@ func (rdb *RoleMemoryDb) GetRole(g string, r string) (*database.Role, *database.
 	return nil, &database.Error{Code: database.RoleNotFound, Message: "Role was not found"}
 }
 
-func (rdb *RoleMemoryDb) GetGuildRoles(g string) ([]*database.Role, *database.Error) {
+func (rdb *RoleMemoryDb) GetGuildRoles(g string) ([]*database.Role, error) {
 	rv := make([]*database.Role, 0, 10)
 	for _, r := range rdb.roles {
 		if r.GuildId == g {
@@ -51,7 +51,7 @@ func (rdb *RoleMemoryDb) GetGuildRoles(g string) ([]*database.Role, *database.Er
 	return rv, nil
 }
 
-func (rdb *RoleMemoryDb) SetRolePermissions(g string, r string, p int) (*database.Role, *database.Error) {
+func (rdb *RoleMemoryDb) SetRolePermissions(g string, r string, p int) (*database.Role, error) {
 	id := getRoleId(g, r)
 	role, ok := rdb.roles[id]
 	if !ok {
@@ -63,7 +63,7 @@ func (rdb *RoleMemoryDb) SetRolePermissions(g string, r string, p int) (*databas
 	return &tmp, nil
 }
 
-func (rdb *RoleMemoryDb) RemoveRole(g string, r string) (*database.Role, *database.Error) {
+func (rdb *RoleMemoryDb) RemoveRole(g string, r string) (*database.Role, error) {
 	rdb.mux.Lock()
 	defer rdb.mux.Unlock()
 

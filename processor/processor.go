@@ -166,13 +166,6 @@ func (proc *Processor) help(m message.Message) (string, error) {
 }
 
 func (proc *Processor) ready(s *discordgo.Session, r *discordgo.Ready) {
-	for _, g := range r.Guilds {
-		if err := proc.tryRegisterGuild(g); err != nil {
-			fmt.Print(err.Error())
-			proc.rc <- false
-			return
-		}
-	}
 	proc.rc <- true
 }
 
@@ -221,13 +214,14 @@ func (proc *Processor) messageCreate(s *discordgo.Session, m *discordgo.MessageC
 
 func (proc *Processor) tryRegisterGuild(g *discordgo.Guild) error {
 	if _, err := proc.Prov.GetGuildD(g.ID); err != nil {
-		if err.Code != database.GuildNotFound {
+		dbErr := database.ErrToDbErr(err)
+		if dbErr == nil || dbErr.Code != database.GuildNotFound {
 			return errors.New("Error while getting guilds: " + err.Error())
 		}
 
 		dbg := &database.Guild{
 			DiscordId: g.ID,
-			Name:      g.Name,
+			Name:      "main",
 		}
 
 		_, err = proc.Prov.AddGuild(dbg)
@@ -236,7 +230,8 @@ func (proc *Processor) tryRegisterGuild(g *discordgo.Guild) error {
 		}
 
 		if _, err := proc.Prov.GetMoney(g.ID); err != nil {
-			if err.Code != database.MoneyNotFound {
+			dbErr := database.ErrToDbErr(err)
+			if dbErr == nil || dbErr.Code != database.MoneyNotFound {
 				return errors.New("Something has gone wrong while getting guilds. Error: " + err.Error())
 			}
 

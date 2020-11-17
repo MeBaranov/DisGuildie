@@ -221,8 +221,8 @@ func (ap *AdminUserProcessor) regOrSync(m message.Message, action int) (string, 
 		return "parsing mention", err
 	}
 
-	guild, dbErr := ap.Prov.GetGuildD(m.GuildId())
-	if dbErr != nil {
+	guild, err := ap.Prov.GetGuildD(m.GuildId())
+	if err != nil {
 		return "getting guilld", err
 	}
 
@@ -286,16 +286,19 @@ func (ap *AdminUserProcessor) syncAllUsers(m message.Message) (string, error) {
 }
 
 func (ap *AdminUserProcessor) reigsterUser(id string, guild *database.Guild, m message.Message) error {
-	dbu, dbErr := ap.Prov.GetUserD(id)
-	if dbErr == nil {
+	dbu, err := ap.Prov.GetUserD(id)
+	if err == nil {
 		if _, ok := dbu.Guilds[guild.DiscordId]; ok {
 			return nil
 		}
-	} else if dbErr.Code != database.UserNotFound {
-		return dbErr
 	} else {
-		dbu = &database.User{
-			Id: id,
+		dbErr := database.ErrToDbErr(err)
+		if dbErr == nil || dbErr.Code != database.UserNotFound {
+			return err
+		} else {
+			dbu = &database.User{
+				Id: id,
+			}
 		}
 	}
 
@@ -330,18 +333,18 @@ func (ap *AdminUserProcessor) reigsterUser(id string, guild *database.Guild, m m
 		TopGuild:    guild.DiscordId,
 	}
 
-	dbu, dbErr = ap.Prov.AddUser(dbu, dbgp)
-	if dbErr != nil {
-		return dbErr
+	dbu, err = ap.Prov.AddUser(dbu, dbgp)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (ap *AdminUserProcessor) syncUserId(id string, guild *database.Guild, m message.Message) error {
-	dbu, dbErr := ap.Prov.GetUserD(id)
-	if dbErr != nil {
-		return dbErr
+	dbu, err := ap.Prov.GetUserD(id)
+	if err != nil {
+		return err
 	}
 
 	return ap.syncUser(dbu, guild, m)
@@ -363,9 +366,9 @@ func (ap *AdminUserProcessor) syncUser(dbu *database.User, guild *database.Guild
 	}
 	uperms.Permissions = p
 
-	dbu, dbErr := ap.Prov.SetUserPermissions(dbu.Id, uperms)
-	if dbErr != nil {
-		return dbErr
+	dbu, err = ap.Prov.SetUserPermissions(dbu.Id, uperms)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -406,7 +409,8 @@ func (ap *AdminUserProcessor) userPermissions(id string, m message.Message) (int
 func (ap *AdminUserProcessor) rolePermission(g string, r string) (int, error) {
 	role, err := ap.Prov.GetRole(g, r)
 	if err != nil {
-		if err.Code == database.RoleNotFound {
+		dbErr := database.ErrToDbErr(err)
+		if dbErr != nil && dbErr.Code == database.RoleNotFound {
 			return 0, nil
 		}
 		return 0, err

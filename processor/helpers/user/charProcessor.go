@@ -54,12 +54,15 @@ func (ap *CharProcessor) create(m message.Message) (string, error) {
 		return "", errors.New("You don't have permissions to modify this user")
 	}
 
-	_, dbErr := ap.Prov.GetCharacter(m.GuildId(), u.Id, c)
-	if dbErr == nil {
+	_, err = ap.Prov.GetCharacter(m.GuildId(), u.Id, c)
+	if err == nil {
 		return "", errors.New(fmt.Sprintf("User <@!%v> already have character %v", u.Id, c))
 	}
-	if dbErr != nil && dbErr.Code != database.CharacterNotFound {
-		return "getting character", dbErr
+	if err != nil {
+		dbErr := database.ErrToDbErr(err)
+		if dbErr == nil || dbErr.Code != database.CharacterNotFound {
+			return "getting character", err
+		}
 	}
 
 	stats := make(map[string]interface{})
@@ -157,12 +160,13 @@ func (ap *CharProcessor) rename(m message.Message) (string, error) {
 		return "getting character", err
 	}
 
-	_, dbErr := ap.Prov.GetCharacter(m.GuildId(), u.Id, newN)
-	if dbErr == nil {
+	_, err = ap.Prov.GetCharacter(m.GuildId(), u.Id, newN)
+	if err == nil {
 		return "", errors.New(fmt.Sprintf("Character %v already extists", newN))
 	}
-	if dbErr.Code != database.CharacterNotFound {
-		return "getting new character", dbErr
+	dbErr := database.ErrToDbErr(err)
+	if dbErr == nil || dbErr.Code != database.CharacterNotFound {
+		return "getting new character", err
 	}
 
 	_, err = ap.Prov.RenameCharacter(m.GuildId(), u.Id, c.Name, newN)
@@ -219,12 +223,13 @@ func (ap *CharProcessor) give(m message.Message) (string, error) {
 		return "getting character", err
 	}
 
-	_, dbErr := ap.Prov.GetCharacter(m.GuildId(), n.Id, char)
-	if dbErr == nil {
+	_, err = ap.Prov.GetCharacter(m.GuildId(), n.Id, char)
+	if err == nil {
 		return "", errors.New(fmt.Sprintf("User <@!%v> already has character %v", n.Id, char))
 	}
-	if dbErr.Code != database.CharacterNotFound {
-		return "getting new character", dbErr
+	dbErr := database.ErrToDbErr(err)
+	if dbErr == nil || dbErr.Code != database.CharacterNotFound {
+		return "getting new character", err
 	}
 
 	_, err = ap.Prov.ChangeCharacterOwner(m.GuildId(), o.Id, c.Name, n.Id)

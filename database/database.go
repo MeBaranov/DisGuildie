@@ -70,57 +70,57 @@ type Money struct {
 }
 
 type DataProvider interface {
-	AddGuild(g *Guild) (*Guild, *Error)
-	GetGuild(g uuid.UUID) (*Guild, *Error)
-	GetGuildN(d string, n string) (*Guild, *Error)
-	GetGuildD(d string) (*Guild, *Error)
-	GetSubGuilds(g uuid.UUID) (map[uuid.UUID]*Guild, *Error)
-	RenameGuild(g uuid.UUID, name string) (*Guild, *Error)
-	MoveGuild(g uuid.UUID, parent uuid.UUID) (*Guild, *Error)
-	RemoveGuild(g uuid.UUID) (*Guild, *Error)
-	RemoveGuildD(d string) (*Guild, *Error)
+	AddGuild(g *Guild) (*Guild, error)
+	GetGuild(g uuid.UUID) (*Guild, error)
+	GetGuildN(d string, n string) (*Guild, error)
+	GetGuildD(d string) (*Guild, error)
+	GetSubGuilds(g uuid.UUID) (map[uuid.UUID]*Guild, error)
+	RenameGuild(g uuid.UUID, name string) (*Guild, error)
+	MoveGuild(g uuid.UUID, parent uuid.UUID) (*Guild, error)
+	RemoveGuild(g uuid.UUID) (*Guild, error)
+	RemoveGuildD(d string) (*Guild, error)
 
-	AddGuildStat(g uuid.UUID, s *Stat) (*Guild, *Error)
-	SetDefaultGuildStat(g uuid.UUID, sn string) (*Guild, *Error)
-	RemoveGuildStat(g uuid.UUID, n string) (*Guild, *Error)
-	RemoveAllGuildStats(g uuid.UUID) (*Guild, *Error)
+	AddGuildStat(g uuid.UUID, s *Stat) (*Guild, error)
+	SetDefaultGuildStat(g uuid.UUID, sn string) (*Guild, error)
+	RemoveGuildStat(g uuid.UUID, n string) (*Guild, error)
+	RemoveAllGuildStats(g uuid.UUID) (*Guild, error)
 
-	AddUser(u *User, g *GuildPermission) (*User, *Error)
-	GetUserD(d string) (*User, *Error)
-	GetUsersInGuild(d string) ([]*User, *Error)
-	SetUserPermissions(u string, g *GuildPermission) (*User, *Error)
-	SetUserSubGuild(u string, g *GuildPermission) (*User, *Error)
-	RemoveUserD(d string, g string) (*User, *Error)
-	EraseUserD(d string) (*User, *Error)
+	AddUser(u *User, g *GuildPermission) (*User, error)
+	GetUserD(d string) (*User, error)
+	GetUsersInGuild(d string) ([]*User, error)
+	SetUserPermissions(u string, g *GuildPermission) (*User, error)
+	SetUserSubGuild(u string, g *GuildPermission) (*User, error)
+	RemoveUserD(d string, g string) (*User, error)
+	EraseUserD(d string) (*User, error)
 
-	AddCharacter(c *Character) (*Character, *Error)
-	GetCharacters(g string, u string) ([]*Character, *Error)
-	GetCharactersSorted(g string, s string, t int, asc bool, limit int) ([]*Character, *Error)
-	GetCharactersOutdated(g string, v int) ([]*Character, *Error)
-	GetCharactersByName(g string, n string) ([]*Character, *Error)
-	GetMainCharacter(g string, u string) (*Character, *Error)
-	GetCharacter(g string, u string, n string) (*Character, *Error)
-	RenameCharacter(g string, u string, old string, name string) (*Character, *Error)
-	ChangeMainCharacter(g string, u string, name string) (*Character, *Error)
-	SetCharacterStat(g string, u string, name string, s string, v interface{}) (*Character, *Error)
-	SetCharacterStatVersion(g string, u string, name string, stats map[string]*Stat, version int) (*Character, *Error)
-	ChangeCharacterOwner(g string, old string, name string, u string) (*Character, *Error)
-	RemoveCharacterStat(g string, u string, name string, s string) (*Character, *Error)
-	RemoveCharacter(g string, u string, name string) (*Character, *Error)
+	AddCharacter(c *Character) (*Character, error)
+	GetCharacters(g string, u string) ([]*Character, error)
+	GetCharactersSorted(g string, s string, t int, asc bool, limit int) ([]*Character, error)
+	GetCharactersOutdated(g string, v int) ([]*Character, error)
+	GetCharactersByName(g string, n string) ([]*Character, error)
+	GetMainCharacter(g string, u string) (*Character, error)
+	GetCharacter(g string, u string, n string) (*Character, error)
+	RenameCharacter(g string, u string, old string, name string) (*Character, error)
+	ChangeMainCharacter(g string, u string, name string) (*Character, error)
+	SetCharacterStat(g string, u string, name string, s string, v interface{}) (*Character, error)
+	SetCharacterStatVersion(g string, u string, name string, stats map[string]*Stat, version int) (*Character, error)
+	ChangeCharacterOwner(g string, old string, name string, u string) (*Character, error)
+	RemoveCharacterStat(g string, u string, name string, s string) (*Character, error)
+	RemoveCharacter(g string, u string, name string) (*Character, error)
 
-	AddRole(r *Role) (*Role, *Error)
-	GetRole(g string, r string) (*Role, *Error)
-	GetGuildRoles(g string) ([]*Role, *Error)
-	SetRolePermissions(g string, r string, p int) (*Role, *Error)
-	RemoveRole(g string, r string) (*Role, *Error)
+	AddRole(r *Role) (*Role, error)
+	GetRole(g string, r string) (*Role, error)
+	GetGuildRoles(g string) ([]*Role, error)
+	SetRolePermissions(g string, r string, p int) (*Role, error)
+	RemoveRole(g string, r string) (*Role, error)
 
-	AddMoney(m *Money) (*Money, *Error)
-	GetMoney(g string) (*Money, *Error)
-	ChangeMoneyOwner(g string, u string) (*Money, *Error)
-	SetMoneyValid(g string, t time.Time) (*Money, *Error)
+	AddMoney(m *Money) (*Money, error)
+	GetMoney(g string) (*Money, error)
+	ChangeMoneyOwner(g string, u string) (*Money, error)
+	SetMoneyValid(g string, t time.Time) (*Money, error)
 
-	Export() ([]byte, *Error)
-	Import(b []byte) *Error
+	Export() ([]byte, error)
+	Import(b []byte) error
 }
 
 type ErrorCode int
@@ -260,4 +260,12 @@ func TypeToString(t int) string {
 	}
 
 	return "undefined"
+}
+
+func ErrToDbErr(e error) *Error {
+	if rv, ok := e.(*Error); ok {
+		return rv
+	}
+
+	return nil
 }

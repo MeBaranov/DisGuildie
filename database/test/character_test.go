@@ -12,11 +12,12 @@ import (
 
 func TestCharAdd(t *testing.T) {
 	for n, d := range testable {
-		id := uuid.New()
+		gid, id := uuid.New().String(), uuid.New().String()
 
 		c := &database.Character{
-			Name:   "test",
-			UserId: id,
+			GuildId: gid,
+			UserId:  id,
+			Name:    "test",
 		}
 		rc, err := d.AddCharacter(c)
 
@@ -31,8 +32,9 @@ func TestCharAdd(t *testing.T) {
 		}
 
 		c = &database.Character{
-			Name:   "test2",
-			UserId: id,
+			GuildId: gid,
+			UserId:  id,
+			Name:    "test2",
 		}
 		rc, err = d.AddCharacter(c)
 
@@ -47,8 +49,9 @@ func TestCharAdd(t *testing.T) {
 		}
 
 		c = &database.Character{
-			Name:   "test2",
-			UserId: id,
+			GuildId: gid,
+			UserId:  id,
+			Name:    "test2",
 		}
 		rc, err = d.AddCharacter(c)
 
@@ -60,8 +63,9 @@ func TestCharAdd(t *testing.T) {
 		}
 
 		c = &database.Character{
-			Name:   "test2",
-			UserId: uuid.New(),
+			GuildId: gid,
+			UserId:  uuid.New().String(),
+			Name:    "test2",
 		}
 		rc, err = d.AddCharacter(c)
 
@@ -79,9 +83,9 @@ func TestCharAdd(t *testing.T) {
 
 func TestCharGet(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g, u, name := uuid.New().String(), uuid.New().String(), "test"
 
-		rc, err := d.GetCharacter(u, name)
+		rc, err := d.GetCharacter(g, u, name)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -90,12 +94,13 @@ func TestCharGet(t *testing.T) {
 		}
 
 		c := &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.GetCharacter(u, name)
+		rc, err = d.GetCharacter(g, u, name)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -106,7 +111,7 @@ func TestCharGet(t *testing.T) {
 			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
-		rc, err = d.GetCharacter(u, "test2")
+		rc, err = d.GetCharacter(g, u, "test2")
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -114,7 +119,15 @@ func TestCharGet(t *testing.T) {
 			t.Fatalf(e)
 		}
 
-		rc, err = d.GetCharacter(uuid.New(), name)
+		rc, err = d.GetCharacter(g, uuid.New().String(), name)
+		if err == nil {
+			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
+		}
+		if e := assertError(err, "Character with name test was not found", database.CharacterNotFound, n); e != "" {
+			t.Fatalf(e)
+		}
+
+		rc, err = d.GetCharacter(uuid.New().String(), u, name)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -126,9 +139,9 @@ func TestCharGet(t *testing.T) {
 
 func TestCharGetMain(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g, u, name := uuid.New().String(), uuid.New().String(), "test"
 
-		rc, err := d.GetMainCharacter(u)
+		rc, err := d.GetMainCharacter(g, u)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -137,12 +150,13 @@ func TestCharGetMain(t *testing.T) {
 		}
 
 		c := &database.Character{
-			Name:   "test3",
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    "test3",
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.GetMainCharacter(u)
+		rc, err = d.GetMainCharacter(g, u)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -154,13 +168,14 @@ func TestCharGetMain(t *testing.T) {
 		}
 
 		c = &database.Character{
-			Name:   name,
-			UserId: u,
-			Main:   true,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
+			Main:    true,
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.GetMainCharacter(u)
+		rc, err = d.GetMainCharacter(g, u)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -172,12 +187,13 @@ func TestCharGetMain(t *testing.T) {
 		}
 
 		c2 := &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
 		}
 		d.AddCharacter(c2)
 
-		rc, err = d.GetMainCharacter(u)
+		rc, err = d.GetMainCharacter(g, u)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -189,9 +205,9 @@ func TestCharGetMain(t *testing.T) {
 
 func TestCharGetNameless(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g, u, name := uuid.New().String(), uuid.New().String(), "test"
 
-		rc, err := d.GetCharacter(u, "")
+		rc, err := d.GetCharacter(g, u, "")
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -200,12 +216,13 @@ func TestCharGetNameless(t *testing.T) {
 		}
 
 		c := &database.Character{
-			Name:   "test3",
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    "test3",
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.GetCharacter(u, "")
+		rc, err = d.GetCharacter(g, u, "")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -217,13 +234,14 @@ func TestCharGetNameless(t *testing.T) {
 		}
 
 		c = &database.Character{
-			Name:   name,
-			UserId: u,
-			Main:   true,
+			GuildId: g,
+			Name:    name,
+			UserId:  u,
+			Main:    true,
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.GetCharacter(u, "")
+		rc, err = d.GetCharacter(g, u, "")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -232,12 +250,13 @@ func TestCharGetNameless(t *testing.T) {
 		}
 
 		c2 := &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			Name:    name,
+			UserId:  u,
 		}
 		d.AddCharacter(c2)
 
-		rc, err = d.GetCharacter(u, "")
+		rc, err = d.GetCharacter(g, u, "")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -249,9 +268,9 @@ func TestCharGetNameless(t *testing.T) {
 
 func TestCharGets(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g, u, name := uuid.New().String(), uuid.New().String(), "test"
 
-		rc, err := d.GetCharacters(u)
+		rc, err := d.GetCharacters(g, u)
 		if err != nil {
 			t.Fatalf("[%v] No error expected getting empty list of characters. Got: %v", n, err)
 		}
@@ -260,12 +279,13 @@ func TestCharGets(t *testing.T) {
 		}
 
 		c := &database.Character{
-			Name:   "test3",
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    "test3",
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.GetCharacters(u)
+		rc, err = d.GetCharacters(g, u)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -280,19 +300,21 @@ func TestCharGets(t *testing.T) {
 		}
 
 		c2 := &database.Character{
-			Name:   name,
-			UserId: u,
-			Main:   true,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
+			Main:    true,
 		}
 		d.AddCharacter(c2)
 
 		c3 := &database.Character{
-			Name:   name,
-			UserId: uuid.New(),
+			GuildId: g,
+			UserId:  uuid.New().String(),
+			Name:    name,
 		}
 		d.AddCharacter(c3)
 
-		rc, err = d.GetCharacters(u)
+		rc, err = d.GetCharacters(g, u)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -309,7 +331,7 @@ func TestCharGets(t *testing.T) {
 			t.Fatalf("[%v] Expected both characters to be present. Got: %v ", n, rc)
 		}
 
-		rc, err = d.GetCharacters(c3.UserId)
+		rc, err = d.GetCharacters(c3.GuildId, c3.UserId)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -324,15 +346,16 @@ func TestCharGets(t *testing.T) {
 
 func TestCharRename(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g, u, name := uuid.New().String(), uuid.New().String(), "test"
 
 		c := &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
 		}
 		d.AddCharacter(c)
 
-		rc, err := d.RenameCharacter(u, name, "test2")
+		rc, err := d.RenameCharacter(g, u, name, "test2")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -343,7 +366,7 @@ func TestCharRename(t *testing.T) {
 			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
-		rc, err = d.GetCharacter(u, "test2")
+		rc, err = d.GetCharacter(g, u, "test2")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -351,7 +374,7 @@ func TestCharRename(t *testing.T) {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
 		}
 
-		rc, err = d.GetCharacter(u, name)
+		rc, err = d.GetCharacter(g, u, name)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -360,12 +383,13 @@ func TestCharRename(t *testing.T) {
 		}
 
 		c = &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.RenameCharacter(u, name, "test2")
+		rc, err = d.RenameCharacter(g, u, name, "test2")
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -373,7 +397,7 @@ func TestCharRename(t *testing.T) {
 			t.Fatal(e)
 		}
 
-		rc, err = d.GetCharacter(u, "test2")
+		rc, err = d.GetCharacter(g, u, "test2")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -381,7 +405,7 @@ func TestCharRename(t *testing.T) {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
 		}
 
-		rc, err = d.GetCharacter(u, name)
+		rc, err = d.GetCharacter(g, u, name)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -390,12 +414,13 @@ func TestCharRename(t *testing.T) {
 		}
 
 		c = &database.Character{
-			Name:   name,
-			UserId: uuid.New(),
+			GuildId: g,
+			UserId:  uuid.New().String(),
+			Name:    name,
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.RenameCharacter(c.UserId, name, "test2")
+		rc, err = d.RenameCharacter(c.GuildId, c.UserId, name, "test2")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -407,9 +432,9 @@ func TestCharRename(t *testing.T) {
 
 func TestCharChangeOwner(t *testing.T) {
 	for n, d := range testable {
-		u, name, u2 := uuid.New(), "test", uuid.New()
+		g, u, name, u2 := uuid.New().String(), uuid.New().String(), "test", uuid.New().String()
 
-		rc, err := d.ChangeCharacterOwner(u, name, u2)
+		rc, err := d.ChangeCharacterOwner(g, u, name, u2)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -418,12 +443,13 @@ func TestCharChangeOwner(t *testing.T) {
 		}
 
 		c := &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.ChangeCharacterOwner(u, name, u2)
+		rc, err = d.ChangeCharacterOwner(g, u, name, u2)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -434,7 +460,7 @@ func TestCharChangeOwner(t *testing.T) {
 			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
-		rcs, err := d.GetCharacters(u)
+		rcs, err := d.GetCharacters(g, u)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -442,7 +468,7 @@ func TestCharChangeOwner(t *testing.T) {
 			t.Fatalf("[%v] Wrong characters amount returned. Actual: %v, expected: %v", n, rcs, "empty")
 		}
 
-		rcs, err = d.GetCharacters(u2)
+		rcs, err = d.GetCharacters(g, u2)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -450,7 +476,7 @@ func TestCharChangeOwner(t *testing.T) {
 			t.Fatalf("[%v] Wrong characters amount returned. Actual: %v, expected: %v", n, rcs, 1)
 		}
 
-		rc, err = d.GetCharacter(u, name)
+		rc, err = d.GetCharacter(g, u, name)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -459,12 +485,13 @@ func TestCharChangeOwner(t *testing.T) {
 		}
 
 		c = &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
 		}
 		d.AddCharacter(c)
 
-		rc, err = d.ChangeCharacterOwner(u, name, u2)
+		rc, err = d.ChangeCharacterOwner(g, u, name, u2)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -472,7 +499,7 @@ func TestCharChangeOwner(t *testing.T) {
 			t.Fatal(e)
 		}
 
-		rc, err = d.GetCharacter(u2, name)
+		rc, err = d.GetCharacter(g, u2, name)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -480,7 +507,7 @@ func TestCharChangeOwner(t *testing.T) {
 			t.Fatalf("[%v] Wrong second character returned. Actual: %v, expected: %v", n, rc, c)
 		}
 
-		rc, err = d.GetCharacter(u, name)
+		rc, err = d.GetCharacter(g, u, name)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -492,27 +519,29 @@ func TestCharChangeOwner(t *testing.T) {
 
 func TestCharChangeMain(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g, u, name := uuid.New().String(), uuid.New().String(), "test"
 
 		c := &database.Character{
-			Name:   "test2",
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    "test2",
 		}
 		c, _ = d.AddCharacter(c)
 
 		c2 := &database.Character{
-			Name:   name,
-			UserId: u,
-			Main:   true,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
+			Main:    true,
 		}
 		c2, _ = d.AddCharacter(c2)
 
-		rc, err := d.ChangeMainCharacter(u, "test2")
+		rc, err := d.ChangeMainCharacter(g, u, "test2")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
 
-		rc, err = d.GetMainCharacter(u)
+		rc, err = d.GetMainCharacter(g, u)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -523,7 +552,7 @@ func TestCharChangeMain(t *testing.T) {
 			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
-		rc, err = d.ChangeMainCharacter(u, "test3")
+		rc, err = d.ChangeMainCharacter(g, u, "test3")
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -535,9 +564,9 @@ func TestCharChangeMain(t *testing.T) {
 
 func TestCharSetStat(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g, u, name := uuid.New().String(), uuid.New().String(), "test"
 
-		rc, err := d.SetCharacterStat(u, name, "a", "b")
+		rc, err := d.SetCharacterStat(g, u, name, "a", "b")
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -546,20 +575,21 @@ func TestCharSetStat(t *testing.T) {
 		}
 
 		c := &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
 		}
 		d.AddCharacter(c)
 
 		current := make(map[string]interface{})
 
-		rc, err = d.GetCharacter(u, name)
+		rc, err = d.GetCharacter(g, u, name)
 		if rc.Body != nil && !reflect.DeepEqual(rc.Body, current) {
 			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
 		}
 
 		current["t1"] = "str"
-		rc, err = d.SetCharacterStat(u, name, "t1", "str")
+		rc, err = d.SetCharacterStat(g, u, name, "t1", "str")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -571,7 +601,7 @@ func TestCharSetStat(t *testing.T) {
 		}
 
 		current["t2"] = 5
-		rc, err = d.SetCharacterStat(u, name, "t2", 5)
+		rc, err = d.SetCharacterStat(g, u, name, "t2", 5)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -580,7 +610,7 @@ func TestCharSetStat(t *testing.T) {
 		}
 
 		current["t1"] = 10
-		rc, err = d.SetCharacterStat(u, name, "t1", 10)
+		rc, err = d.SetCharacterStat(g, u, name, "t1", 10)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -589,7 +619,7 @@ func TestCharSetStat(t *testing.T) {
 		}
 
 		current["t2"] = "str2"
-		rc, err = d.SetCharacterStat(u, name, "t2", "str2")
+		rc, err = d.SetCharacterStat(g, u, name, "t2", "str2")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -597,7 +627,7 @@ func TestCharSetStat(t *testing.T) {
 			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
 		}
 
-		rc, err = d.GetCharacter(u, name)
+		rc, err = d.GetCharacter(g, u, name)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -609,9 +639,9 @@ func TestCharSetStat(t *testing.T) {
 
 func TestCharRemoveStat(t *testing.T) {
 	for n, d := range testable {
-		u, name := uuid.New(), "test"
+		g, u, name := uuid.New().String(), uuid.New().String(), "test"
 
-		rc, err := d.RemoveCharacterStat(u, name, "a")
+		rc, err := d.RemoveCharacterStat(g, u, name, "a")
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Got: %v", n, rc)
 		}
@@ -620,21 +650,22 @@ func TestCharRemoveStat(t *testing.T) {
 		}
 
 		c := &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
 		}
 		d.AddCharacter(c)
 
 		current := make(map[string]interface{})
 
-		rc, err = d.SetCharacterStat(u, name, "t1", "str")
-		rc, err = d.SetCharacterStat(u, name, "t2", 5)
+		rc, err = d.SetCharacterStat(g, u, name, "t1", "str")
+		rc, err = d.SetCharacterStat(g, u, name, "t2", 5)
 		current["t1"] = 10
-		rc, err = d.SetCharacterStat(u, name, "t1", 10)
+		rc, err = d.SetCharacterStat(g, u, name, "t1", 10)
 		current["t2"] = "str2"
-		rc, err = d.SetCharacterStat(u, name, "t2", "str2")
+		rc, err = d.SetCharacterStat(g, u, name, "t2", "str2")
 
-		rc, err = d.RemoveCharacterStat(u, name, "a")
+		rc, err = d.RemoveCharacterStat(g, u, name, "a")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -646,7 +677,7 @@ func TestCharRemoveStat(t *testing.T) {
 		}
 
 		delete(current, "t1")
-		rc, err = d.RemoveCharacterStat(u, name, "t1")
+		rc, err = d.RemoveCharacterStat(g, u, name, "t1")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -654,7 +685,7 @@ func TestCharRemoveStat(t *testing.T) {
 			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
 		}
 
-		rc, err = d.GetCharacter(u, name)
+		rc, err = d.GetCharacter(g, u, name)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -663,7 +694,7 @@ func TestCharRemoveStat(t *testing.T) {
 		}
 
 		delete(current, "t2")
-		rc, err = d.RemoveCharacterStat(u, name, "t2")
+		rc, err = d.RemoveCharacterStat(g, u, name, "t2")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -671,7 +702,7 @@ func TestCharRemoveStat(t *testing.T) {
 			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
 		}
 
-		rc, err = d.RemoveCharacterStat(u, name, "t3")
+		rc, err = d.RemoveCharacterStat(g, u, name, "t3")
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -679,7 +710,7 @@ func TestCharRemoveStat(t *testing.T) {
 			t.Fatalf("[%v] Unexpected stats. Actual: %v. Expected: %v", n, rc.Body, current)
 		}
 
-		rc, err = d.GetCharacter(u, name)
+		rc, err = d.GetCharacter(g, u, name)
 		if err != nil {
 			t.Fatalf("[%v] Error not expected. Got: %v", n, err)
 		}
@@ -691,9 +722,9 @@ func TestCharRemoveStat(t *testing.T) {
 
 func TestCharRemove(t *testing.T) {
 	for n, d := range testable {
-		u, name, name2 := uuid.New(), "test", "test2"
+		g, u, name, name2 := uuid.New().String(), uuid.New().String(), "test", "test2"
 
-		rc, err := d.RemoveCharacter(u, name)
+		rc, err := d.RemoveCharacter(g, u, name)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected adding character. Received: %v", n, err)
 		}
@@ -702,18 +733,20 @@ func TestCharRemove(t *testing.T) {
 		}
 
 		c := &database.Character{
-			Name:   name,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name,
 		}
 		rc, err = d.AddCharacter(c)
 
 		c2 := &database.Character{
-			Name:   name2,
-			UserId: u,
+			GuildId: g,
+			UserId:  u,
+			Name:    name2,
 		}
 		rc, err = d.AddCharacter(c2)
 
-		rc, err = d.RemoveCharacter(u, name)
+		rc, err = d.RemoveCharacter(g, u, name)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
@@ -724,7 +757,7 @@ func TestCharRemove(t *testing.T) {
 			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
-		rcs, err := d.GetCharacters(u)
+		rcs, err := d.GetCharacters(g, u)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
@@ -735,7 +768,7 @@ func TestCharRemove(t *testing.T) {
 			t.Fatalf("[%v] Wrong character is kept. Actual: %v, expected: %v", n, rcs, *c2)
 		}
 
-		rc, err = d.RemoveCharacter(u, name2)
+		rc, err = d.RemoveCharacter(g, u, name2)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
@@ -743,7 +776,7 @@ func TestCharRemove(t *testing.T) {
 			t.Fatalf("[%v] Wrong character returned. Actual: %v, expected: %v", n, *rc, *c2)
 		}
 
-		rcs, err = d.GetCharacters(u)
+		rcs, err = d.GetCharacters(g, u)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}

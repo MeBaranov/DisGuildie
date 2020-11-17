@@ -15,7 +15,7 @@ type GuildMemoryDb struct {
 	mux     sync.Mutex
 }
 
-func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, error) {
 	gdb.mux.Lock()
 	defer gdb.mux.Unlock()
 	if g.DiscordId != "" {
@@ -63,7 +63,7 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, *databas
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) GetGuild(g uuid.UUID) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) GetGuild(g uuid.UUID) (*database.Guild, error) {
 	if guild, ok := gdb.guilds[g]; ok {
 		tmp := *guild
 		return &tmp, nil
@@ -72,7 +72,7 @@ func (gdb *GuildMemoryDb) GetGuild(g uuid.UUID) (*database.Guild, *database.Erro
 	return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
 }
 
-func (gdb *GuildMemoryDb) GetGuildD(d string) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) GetGuildD(d string) (*database.Guild, error) {
 	if guild, ok := gdb.guildsD[d]; ok {
 		tmp := *guild
 		return &tmp, nil
@@ -81,7 +81,7 @@ func (gdb *GuildMemoryDb) GetGuildD(d string) (*database.Guild, *database.Error)
 	return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
 }
 
-func (gdb *GuildMemoryDb) GetGuildN(p string, n string) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) GetGuildN(p string, n string) (*database.Guild, error) {
 	gdb.mux.Lock()
 	defer gdb.mux.Unlock()
 
@@ -100,7 +100,7 @@ func (gdb *GuildMemoryDb) GetGuildN(p string, n string) (*database.Guild, *datab
 	return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
 }
 
-func (gdb *GuildMemoryDb) GetSubGuilds(g uuid.UUID) (map[uuid.UUID]*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) GetSubGuilds(g uuid.UUID) (map[uuid.UUID]*database.Guild, error) {
 	gdb.mux.Lock()
 	defer gdb.mux.Unlock()
 
@@ -134,7 +134,7 @@ func (gdb *GuildMemoryDb) GetSubGuilds(g uuid.UUID) (map[uuid.UUID]*database.Gui
 	return subGuilds, nil
 }
 
-func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild, error) {
 	gdb.mux.Lock()
 	defer gdb.mux.Unlock()
 
@@ -169,7 +169,7 @@ func (gdb *GuildMemoryDb) RenameGuild(g uuid.UUID, name string) (*database.Guild
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) MoveGuild(g uuid.UUID, p uuid.UUID) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) MoveGuild(g uuid.UUID, p uuid.UUID) (*database.Guild, error) {
 	guild, ok := gdb.guilds[g]
 	if !ok {
 		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
@@ -185,7 +185,7 @@ func (gdb *GuildMemoryDb) MoveGuild(g uuid.UUID, p uuid.UUID) (*database.Guild, 
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) RemoveGuild(g uuid.UUID) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) RemoveGuild(g uuid.UUID) (*database.Guild, error) {
 	guild, ok := gdb.guilds[g]
 	if !ok {
 		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
@@ -207,7 +207,7 @@ func (gdb *GuildMemoryDb) RemoveGuild(g uuid.UUID) (*database.Guild, *database.E
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) RemoveGuildD(d string) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) RemoveGuildD(d string) (*database.Guild, error) {
 	guild, ok := gdb.guildsD[d]
 	if !ok {
 		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
@@ -222,7 +222,7 @@ func (gdb *GuildMemoryDb) RemoveGuildD(d string) (*database.Guild, *database.Err
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, s *database.Stat) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, s *database.Stat) (*database.Guild, error) {
 	guild, ok := gdb.guilds[g]
 	if !ok {
 		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
@@ -252,7 +252,7 @@ func (gdb *GuildMemoryDb) AddGuildStat(g uuid.UUID, s *database.Stat) (*database
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) SetDefaultGuildStat(g uuid.UUID, sn string) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) SetDefaultGuildStat(g uuid.UUID, sn string) (*database.Guild, error) {
 	guild, ok := gdb.guilds[g]
 	if !ok {
 		return nil, &database.Error{Code: database.GuildNotFound, Message: "Guild was not found"}
@@ -270,7 +270,7 @@ func (gdb *GuildMemoryDb) SetDefaultGuildStat(g uuid.UUID, sn string) (*database
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guild, error) {
 	gdb.mux.Lock()
 	defer gdb.mux.Unlock()
 
@@ -303,7 +303,7 @@ func (gdb *GuildMemoryDb) RemoveGuildStat(g uuid.UUID, n string) (*database.Guil
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) RemoveAllGuildStats(g uuid.UUID) (*database.Guild, *database.Error) {
+func (gdb *GuildMemoryDb) RemoveAllGuildStats(g uuid.UUID) (*database.Guild, error) {
 	gdb.mux.Lock()
 	defer gdb.mux.Unlock()
 
@@ -321,7 +321,7 @@ func (gdb *GuildMemoryDb) RemoveAllGuildStats(g uuid.UUID) (*database.Guild, *da
 	return &tmp, nil
 }
 
-func (gdb *GuildMemoryDb) removeGuildsByParent(g uuid.UUID) *database.Error {
+func (gdb *GuildMemoryDb) removeGuildsByParent(g uuid.UUID) error {
 	removeUs := make([]uuid.UUID, 1, 10)
 
 	for _, v := range gdb.guilds {
@@ -330,13 +330,15 @@ func (gdb *GuildMemoryDb) removeGuildsByParent(g uuid.UUID) *database.Error {
 		}
 	}
 
-	var returnErr *database.Error = nil
 	for _, r := range removeUs {
 		_, err := gdb.RemoveGuild(r)
-		if err != nil && err.Code != database.GuildNotFound {
-			returnErr = err
+		if err != nil {
+			dbErr := database.ErrToDbErr(err)
+			if dbErr == nil || dbErr.Code != database.GuildNotFound {
+				return err
+			}
 		}
 	}
 
-	return returnErr
+	return nil
 }

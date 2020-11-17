@@ -495,7 +495,7 @@ func TestGuildRemoveStat(t *testing.T) {
 	for n, d := range testable {
 		g := &database.Guild{
 			Name:      "test",
-			DiscordId: "did166",
+			DiscordId: uuid.New().String(),
 		}
 		rc1, _ := d.AddGuild(g)
 
@@ -584,10 +584,10 @@ func TestGuildRemoveAllStats(t *testing.T) {
 	for n, d := range testable {
 		g := &database.Guild{
 			Name:      "test",
-			DiscordId: "did166",
+			DiscordId: uuid.New().String(),
 		}
-		rc1, _ := d.AddGuild(g)
-
+		rc1, f := d.AddGuild(g)
+		_ = f
 		g = &database.Guild{
 			Name:     "sub1-test1",
 			ParentId: rc1.GuildId,

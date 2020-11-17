@@ -39,7 +39,7 @@ func (ap *HierarchyProcessor) ProcessMessage(m message.Message) (string, error) 
 
 	a := uuid.Nil
 	auth, err := m.Author()
-	if err != nil {
+	if err == nil {
 		if g, ok := auth.Guilds[m.GuildId()]; ok {
 			a = g.GuildId
 		}
@@ -50,7 +50,8 @@ func (ap *HierarchyProcessor) ProcessMessage(m message.Message) (string, error) 
 		return "getting subguilds", err
 	}
 
-	rv := gld.Name
+	rv := "Sub-guilds hierarchy:\n"
+	rv += gld.Name
 	if gld.GuildId == a {
 		rv += "<-- You are here"
 	}

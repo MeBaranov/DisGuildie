@@ -46,10 +46,11 @@ func (ap *AdminRoleProcessor) add(m message.Message) (string, error) {
 		return "parsing permission", err
 	}
 
-	role, dbErr := ap.Prov.GetRole(m.GuildId(), rid)
-	if dbErr != nil {
-		if dbErr.Code != database.RoleNotFound {
-			return "gettomg role", dbErr
+	role, err := ap.Prov.GetRole(m.GuildId(), rid)
+	if err != nil {
+		dbErr := database.ErrToDbErr(err)
+		if dbErr == nil || dbErr.Code != database.RoleNotFound {
+			return "getting role", err
 		}
 
 		role = &database.Role{
@@ -57,7 +58,7 @@ func (ap *AdminRoleProcessor) add(m message.Message) (string, error) {
 			Id:          rid,
 			Permissions: p,
 		}
-		if _, dbErr = ap.Prov.AddRole(role); dbErr != nil {
+		if _, err = ap.Prov.AddRole(role); err != nil {
 			return "adding role", err
 		}
 		return fmt.Sprintf("Permission %v added for the role %v", permStr, roleStr), nil
@@ -112,9 +113,9 @@ func (ap *AdminRoleProcessor) remove(m message.Message) (string, error) {
 		return "parsing permission", err
 	}
 
-	role, dbErr := ap.Prov.GetRole(m.GuildId(), rid)
-	if dbErr != nil {
-		return "getting role", dbErr
+	role, err := ap.Prov.GetRole(m.GuildId(), rid)
+	if err != nil {
+		return "getting role", err
 	}
 
 	p = ^p & role.Permissions
