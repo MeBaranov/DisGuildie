@@ -57,21 +57,21 @@ func (cdb *CharMemoryDb) GetCharactersSorted(g string, s string, t int, asc bool
 		f = func(i int, j int) bool {
 			av, ok := rv[i].Body[s]
 			if !ok {
-				return !asc
+				return false
 			}
 			bv, ok := rv[j].Body[s]
 			if !ok {
-				return asc
+				return true
 			}
 
 			ai, ok := av.(int)
 			if !ok {
-				return !asc
+				return false
 			}
 
 			bi, ok := bv.(int)
 			if !ok {
-				return asc
+				return true
 			}
 
 			return (asc && ai < bi) || (!asc && ai > bi)
@@ -80,21 +80,21 @@ func (cdb *CharMemoryDb) GetCharactersSorted(g string, s string, t int, asc bool
 		f = func(i int, j int) bool {
 			av, ok := rv[i].Body[s]
 			if !ok {
-				return !asc
+				return false
 			}
 			bv, ok := rv[j].Body[s]
 			if !ok {
-				return asc
+				return true
 			}
 
 			ai, ok := av.(string)
 			if !ok {
-				return !asc
+				return false
 			}
 
 			bi, ok := bv.(string)
 			if !ok {
-				return asc
+				return true
 			}
 
 			return (asc && ai < bi) || (!asc && ai > bi)
@@ -213,6 +213,9 @@ func (cdb *CharMemoryDb) SetCharacterStatVersion(g string, u string, name string
 	c, err := cdb.getCharacter(g, u, name)
 	if err != nil {
 		return nil, err
+	}
+	if c.StatVersion >= version {
+		return c, nil
 	}
 
 	if c.Body == nil {

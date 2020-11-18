@@ -54,7 +54,7 @@ func (gdb *GuildMemoryDb) AddGuild(g *database.Guild) (*database.Guild, error) {
 	g.GuildId = uuid.New()
 	if g.DiscordId != "" {
 		g.TopLevelParentId = g.GuildId
-		g.StatVersion = -1
+		g.StatVersion = 0
 		gdb.guildsD[g.DiscordId] = g
 	}
 	gdb.guilds[g.GuildId] = g
@@ -262,7 +262,7 @@ func (gdb *GuildMemoryDb) SetDefaultGuildStat(g uuid.UUID, sn string) (*database
 	}
 
 	if _, ok := guild.Stats[sn]; !ok {
-		return nil, &database.Error{Code: database.StatNotFound, Message: "Could not find stat with name " + sn}
+		return nil, &database.Error{Code: database.StatNotFound, Message: "Stat was not found"}
 	}
 
 	guild.DefaultStat = sn
