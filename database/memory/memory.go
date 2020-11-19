@@ -20,12 +20,12 @@ type MemoryDB struct {
 // constructor function
 func NewMemoryDb() *MemoryDB {
 	m := MemoryDB{}
-	m.chars = make(map[string]*database.Character)
-	m.guilds = make(map[uuid.UUID]*database.Guild)
-	m.guildsD = make(map[string]*database.Guild)
-	m.money = make(map[string]*database.Money)
-	m.roles = make(map[string]*database.Role)
-	m.usersD = make(map[string]*database.User)
+	m.Chars = make(map[string]*database.Character)
+	m.Guilds = make(map[uuid.UUID]*database.Guild)
+	m.GuildsD = make(map[string]*database.Guild)
+	m.Money = make(map[string]*database.Money)
+	m.Roles = make(map[string]*database.Role)
+	m.UsersD = make(map[string]*database.User)
 	return &m
 }
 

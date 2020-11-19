@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/google/uuid"
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/utility"
 )
@@ -154,14 +155,19 @@ func (dgm *DiscordGoMessage) GuildMembersWithRole(r string) (map[string]string, 
 
 func (dgm *DiscordGoMessage) CurSegment() string {
 	var rv string
-	rv, dgm.curMsg = utility.NextCommand(&dgm.curMsg)
+	for rv == "" && dgm.curMsg != "" {
+		rv, dgm.curMsg = utility.NextCommand(&dgm.curMsg)
+	}
 
 	return rv
 }
 
 func (dgm *DiscordGoMessage) PeekSegment() string {
 	var rv string
-	rv, _ = utility.NextCommand(&dgm.curMsg)
+	tmp := dgm.curMsg
+	for rv == "" && dgm.curMsg != "" {
+		rv, tmp = utility.NextCommand(&tmp)
+	}
 
 	return rv
 }
@@ -232,4 +238,77 @@ func (dgm *DiscordGoMessage) getPermissions() (int, error) {
 	}
 
 	return 0, &database.Error{Code: database.UserNotInGuild, Message: "User is not registered in this guild"}
+}
+
+func (dgm *DiscordGoMessage) CheckGuildModificationPermissions(gid uuid.UUID) (bool, error) {
+	var err error
+
+	perm, err := dgm.AuthorPermissions()
+	if err != nil {
+		return false, err
+	}
+
+	if perm&database.EditGuildCharsPerm != 0 {
+		return true, nil
+	}
+
+	auth, err := dgm.Author()
+	if err != nil {
+		return false, errors.New("You don't seem to be a part of this guild Oo. Try again later please")
+	}
+
+	gper, ok := auth.Guilds[dgm.GuildId()]
+	if !ok {
+		return false, errors.New("You don't seem to be a part of this guild Oo. Try again later please")
+	}
+
+	ok, err = utility.ValidateGuildAccess(dgm.prov, gper, gid)
+	if err != nil {
+		return false, err
+	}
+
+	return ok, nil
+}
+
+func (dgm *DiscordGoMessage) CheckUserModificationPermissions(uid string) (bool, error) {
+	if uid == dgm.AuthorId() {
+		return true, nil
+	}
+
+	var err error
+	trgUser, err := dgm.prov.GetUserD(uid)
+	if err != nil {
+		return false, errors.New("User you're trying to modify doesn't seem to be a part of this guild")
+	}
+
+	trgPerm, ok := trgUser.Guilds[dgm.GuildId()]
+	if !ok {
+		return false, errors.New("User you're trying to modify doesn't seem to be a part of this guild")
+	}
+
+	perm, err := dgm.AuthorPermissions()
+	if err != nil {
+		return false, err
+	}
+
+	if perm&database.EditGuildCharsPerm != 0 {
+		return true, nil
+	}
+
+	auth, err := dgm.Author()
+	if err != nil {
+		return false, errors.New("You don't seem to be a part of this guild Oo. Try again later please")
+	}
+
+	gper, ok := auth.Guilds[dgm.GuildId()]
+	if !ok {
+		return false, errors.New("You don't seem to be a part of this guild Oo. Try again later please")
+	}
+
+	ok, err = utility.ValidateUserAccess(dgm.prov, gper, trgPerm.GuildId)
+	if err != nil {
+		return false, err
+	}
+
+	return ok, nil
 }

@@ -57,7 +57,7 @@ func (ap *AdminUserProcessor) remove(m message.Message) (string, error) {
 		return "parsing mention", err
 	}
 
-	ok, err := ap.CheckUserModificationPermissions(m, uid)
+	ok, err := m.CheckUserModificationPermissions(uid)
 	if err != nil {
 		return "checking modification permissions", err
 	}
@@ -132,7 +132,7 @@ func (ap *AdminUserProcessor) assign(m message.Message) (string, error) {
 		return "getting subguild", err
 	}
 
-	ok, err := ap.CheckUserModificationPermissions(m, uid)
+	ok, err := m.CheckUserModificationPermissions(uid)
 	if err != nil {
 		return "checking source modification permissions", err
 	}
@@ -140,7 +140,7 @@ func (ap *AdminUserProcessor) assign(m message.Message) (string, error) {
 		return "", errors.New("You don't have permissions to assign this user")
 	}
 
-	ok, err = ap.CheckGuildModificationPermissions(m, guild.GuildId)
+	ok, err = m.CheckGuildModificationPermissions(guild.GuildId)
 	if err != nil {
 		return "checking target modification permissions", err
 	}

@@ -7,7 +7,7 @@ import (
 )
 
 type UserMemoryDb struct {
-	usersD map[string]*database.User
+	UsersD map[string]*database.User
 	mux    sync.Mutex
 }
 
@@ -15,7 +15,7 @@ func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission)
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
-	if user, ok := udb.usersD[u.Id]; ok {
+	if user, ok := udb.UsersD[u.Id]; ok {
 		if _, ok = user.Guilds[gp.TopGuild]; !ok {
 			user.Guilds[gp.TopGuild] = gp
 			tmp := *user
@@ -29,7 +29,7 @@ func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission)
 	u = &newU
 
 	u.Guilds = map[string]*database.GuildPermission{gp.TopGuild: gp}
-	udb.usersD[u.Id] = u
+	udb.UsersD[u.Id] = u
 
 	tmp := *u
 	return &tmp, nil
@@ -50,7 +50,7 @@ func (udb *UserMemoryDb) GetUsersInGuild(d string) ([]*database.User, error) {
 	defer udb.mux.Unlock()
 
 	rv := make([]*database.User, 0, 100)
-	for _, u := range udb.usersD {
+	for _, u := range udb.UsersD {
 		if _, ok := u.Guilds[d]; ok {
 			tmp := *u
 			rv = append(rv, &tmp)
@@ -117,13 +117,13 @@ func (udb *UserMemoryDb) EraseUserD(u string) (*database.User, error) {
 		return nil, err
 	}
 
-	delete(udb.usersD, u)
+	delete(udb.UsersD, u)
 	tmp := *user
 	return &tmp, nil
 }
 
 func (udb *UserMemoryDb) getUserD(d string) (*database.User, error) {
-	if user, ok := udb.usersD[d]; ok {
+	if user, ok := udb.UsersD[d]; ok {
 		return user, nil
 	}
 

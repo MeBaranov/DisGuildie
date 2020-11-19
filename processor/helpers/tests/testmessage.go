@@ -1,8 +1,10 @@
 package tests
 
 import (
+	"github.com/google/uuid"
 	"github.com/mebaranov/disguildie/database"
 	"github.com/mebaranov/disguildie/message"
+	"github.com/mebaranov/disguildie/utility"
 )
 
 type TestMessage struct {
@@ -26,10 +28,19 @@ type TestMessage struct {
 	MoreSegmentsMock     func() bool
 
 	SendMessageMock func(string, ...interface{})
+
+	CheckGuildModificationPermissionsMock func(gid uuid.UUID) (bool, error)
+	CheckUserModificationPermissionsMock  func(uid string) (bool, error)
+
+	CurMsg string
 }
 
 func New() message.Message {
 	return &TestMessage{}
+}
+
+func validator() {
+	var _ message.Message = &TestMessage{}
 }
 
 func (tm *TestMessage) GuildId() string {
@@ -73,19 +84,30 @@ func (tm *TestMessage) GuildMembersWithRole(r string) (map[string]string, error)
 }
 
 func (tm *TestMessage) CurSegment() string {
-	return tm.CurSegmentMock()
+	var rv string
+	for rv == "" && tm.CurMsg != "" {
+		rv, tm.CurMsg = utility.NextCommand(&tm.CurMsg)
+	}
+
+	return rv
 }
 
 func (tm *TestMessage) PeekSegment() string {
-	return tm.PeekSegmentMock()
+	var rv string
+	tmp := tm.CurMsg
+	for rv == "" && tmp != "" {
+		rv, tmp = utility.NextCommand(&tmp)
+	}
+
+	return rv
 }
 
 func (tm *TestMessage) LeftOverSegments() string {
-	return tm.LeftOverSegmentsMock()
+	return tm.CurMsg
 }
 
 func (tm *TestMessage) MoreSegments() bool {
-	return tm.MoreSegmentsMock()
+	return tm.CurMsg == ""
 }
 
 func (tm *TestMessage) SendMessage(s string, strs ...interface{}) {
@@ -98,4 +120,12 @@ func (tm *TestMessage) UserRoles(id string) ([]string, error) {
 
 func (tm *TestMessage) GetRoleId(name string) (string, error) {
 	return tm.GetRoleIdMock(name)
+}
+
+func (tm *TestMessage) CheckGuildModificationPermissions(gid uuid.UUID) (bool, error) {
+	return tm.CheckGuildModificationPermissionsMock(gid)
+}
+
+func (tm *TestMessage) CheckUserModificationPermissions(uid string) (bool, error) {
+	return tm.CheckUserModificationPermissionsMock(uid)
 }

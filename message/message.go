@@ -1,6 +1,9 @@
 package message
 
-import "github.com/mebaranov/disguildie/database"
+import (
+	"github.com/google/uuid"
+	"github.com/mebaranov/disguildie/database"
+)
 
 type Message interface {
 	GuildId() string
@@ -23,4 +26,7 @@ type Message interface {
 	MoreSegments() bool
 
 	SendMessage(string, ...interface{})
+
+	CheckGuildModificationPermissions(uuid.UUID) (bool, error)
+	CheckUserModificationPermissions(uid string) (bool, error)
 }

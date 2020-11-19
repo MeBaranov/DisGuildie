@@ -46,15 +46,15 @@ func (ap *AdminGuildProcessor) add(m message.Message) (string, error) {
 		pguild, err = ap.Prov.GetGuildN(m.GuildId(), parent)
 	}
 	if err != nil {
-		return "getting guild", err
+		return "getting parent guild", err
 	}
 
-	ok, err := ap.CheckGuildModificationPermissions(m, pguild.GuildId)
+	ok, err := m.CheckGuildModificationPermissions(pguild.GuildId)
 	if err != nil {
 		return "checking modification permissions", err
 	}
 	if !ok {
-		return "", errors.New("You don't have permissions to add to this sub-guild")
+		return "", errors.New("You don't have permissions to modify the sub-guild")
 	}
 
 	g := &database.Guild{
@@ -81,7 +81,7 @@ func (ap *AdminGuildProcessor) rename(m message.Message) (string, error) {
 		return "getting guild", err
 	}
 
-	ok, err := ap.CheckGuildModificationPermissions(m, g.GuildId)
+	ok, err := m.CheckGuildModificationPermissions(g.GuildId)
 	if err != nil {
 		return "checking modification permissions", err
 	}
@@ -119,7 +119,7 @@ func (ap *AdminGuildProcessor) move(m message.Message) (string, error) {
 		return "getting target guild", err
 	}
 
-	ok, err := ap.CheckGuildModificationPermissions(m, g.GuildId)
+	ok, err := m.CheckGuildModificationPermissions(g.GuildId)
 	if err != nil {
 		return "checking source mdofication permissions", err
 	}
@@ -127,7 +127,7 @@ func (ap *AdminGuildProcessor) move(m message.Message) (string, error) {
 		return "", errors.New(fmt.Sprintf("You don't have permissions to modify source (%v) sub-guild", name))
 	}
 
-	ok, err = ap.CheckGuildModificationPermissions(m, pguild.GuildId)
+	ok, err = m.CheckGuildModificationPermissions(pguild.GuildId)
 	if err != nil {
 		return "checking target modification pemissions", err
 	}
@@ -154,7 +154,7 @@ func (ap *AdminGuildProcessor) remove(m message.Message) (string, error) {
 		return "getting guild", err
 	}
 
-	ok, err := ap.CheckGuildModificationPermissions(m, g.GuildId)
+	ok, err := m.CheckGuildModificationPermissions(g.GuildId)
 	if err != nil {
 		return "checking modification permissions", err
 	}
