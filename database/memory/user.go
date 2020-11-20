@@ -11,11 +11,11 @@ type UserMemoryDb struct {
 	mux    sync.Mutex
 }
 
-func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission) (*database.User, error) {
+func (udb *UserMemoryDb) AddUser(d string, gp *database.GuildPermission) (*database.User, error) {
 	udb.mux.Lock()
 	defer udb.mux.Unlock()
 
-	if user, ok := udb.UsersD[u.Id]; ok {
+	if user, ok := udb.UsersD[d]; ok {
 		if _, ok = user.Guilds[gp.TopGuild]; !ok {
 			user.Guilds[gp.TopGuild] = gp
 			tmp := *user
@@ -25,11 +25,12 @@ func (udb *UserMemoryDb) AddUser(u *database.User, gp *database.GuildPermission)
 		return nil, &database.Error{Code: database.UserAlreadyInGuild, Message: "The user is already registered in the guild"}
 	}
 
-	newU := *u
-	u = &newU
-
-	u.Guilds = map[string]*database.GuildPermission{gp.TopGuild: gp}
-	udb.UsersD[u.Id] = u
+	tmpGp := *gp
+	u := &database.User{
+		Id:     d,
+		Guilds: map[string]*database.GuildPermission{gp.TopGuild: &tmpGp},
+	}
+	udb.UsersD[d] = u
 
 	tmp := *u
 	return &tmp, nil

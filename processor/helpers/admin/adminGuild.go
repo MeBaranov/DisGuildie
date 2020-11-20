@@ -65,7 +65,7 @@ func (ap *AdminGuildProcessor) add(m message.Message) (string, error) {
 		return "adding guild", err
 	}
 
-	return fmt.Sprintf("Subguild %v registered under %v.", gldName, parent), nil
+	return fmt.Sprintf("Sub-guild %v registered under %v.", gldName, parent), nil
 }
 
 func (ap *AdminGuildProcessor) rename(m message.Message) (string, error) {
@@ -78,7 +78,7 @@ func (ap *AdminGuildProcessor) rename(m message.Message) (string, error) {
 	var err error
 	g, err := ap.Prov.GetGuildN(m.GuildId(), oldName)
 	if err != nil {
-		return "getting guild", err
+		return "getting source guild", err
 	}
 
 	ok, err := m.CheckGuildModificationPermissions(g.GuildId)
@@ -86,14 +86,14 @@ func (ap *AdminGuildProcessor) rename(m message.Message) (string, error) {
 		return "checking modification permissions", err
 	}
 	if !ok {
-		return "", errors.New("You don't have permissions to add to this sub-guild")
+		return "", errors.New("You don't have permissions to modify the sub-guild")
 	}
 
 	if _, err = ap.Prov.RenameGuild(g.GuildId, newName); err != nil {
 		return "renaming guild", err
 	}
 
-	return fmt.Sprintf("Guild renamed to %v", newName), nil
+	return fmt.Sprintf("Sub-guild '%v' renamed to '%v'", oldName, newName), nil
 }
 
 func (ap *AdminGuildProcessor) move(m message.Message) (string, error) {
@@ -121,10 +121,10 @@ func (ap *AdminGuildProcessor) move(m message.Message) (string, error) {
 
 	ok, err := m.CheckGuildModificationPermissions(g.GuildId)
 	if err != nil {
-		return "checking source mdofication permissions", err
+		return "checking source modification permissions", err
 	}
 	if !ok {
-		return "", errors.New(fmt.Sprintf("You don't have permissions to modify source (%v) sub-guild", name))
+		return "", errors.New(fmt.Sprintf("You don't have permissions to modify the source (%v) sub-guild", name))
 	}
 
 	ok, err = m.CheckGuildModificationPermissions(pguild.GuildId)
@@ -132,14 +132,14 @@ func (ap *AdminGuildProcessor) move(m message.Message) (string, error) {
 		return "checking target modification pemissions", err
 	}
 	if !ok {
-		return "", errors.New(fmt.Sprintf("You don't have permissions to modify target (%v) sub-guild", name))
+		return "", errors.New(fmt.Sprintf("You don't have permissions to modify the target (%v) sub-guild", name))
 	}
 
 	if _, err = ap.Prov.MoveGuild(g.GuildId, pguild.GuildId); err != nil {
 		return "moving guild", err
 	}
 
-	return fmt.Sprintf("Guild %v moved under parent %v", name, parent), nil
+	return fmt.Sprintf("Sub-guild '%v' moved under '%v'", name, parent), nil
 }
 
 func (ap *AdminGuildProcessor) remove(m message.Message) (string, error) {
@@ -164,7 +164,7 @@ func (ap *AdminGuildProcessor) remove(m message.Message) (string, error) {
 
 	subs, err := ap.Prov.GetSubGuilds(g.GuildId)
 	if err != nil {
-		return "getting subguilds", err
+		return "getting sub-guilds", err
 	}
 
 	users, err := ap.Prov.GetUsersInGuild(m.GuildId())
@@ -187,7 +187,7 @@ func (ap *AdminGuildProcessor) remove(m message.Message) (string, error) {
 		return "removing sub-guild", err
 	}
 
-	return fmt.Sprintf("Sub-guild %v removed", name), nil
+	return fmt.Sprintf("Sub-guild '%v' removed", name), nil
 }
 
 func (ap *AdminGuildProcessor) help(m message.Message) (string, error) {
@@ -206,8 +206,8 @@ func (ap *AdminGuildProcessor) help(m message.Message) (string, error) {
 	rv += "\t -- \"!g admin guild add <child guild name> main\" (\"!g a g a <name>\") - Add sub-guild to the main level\n"
 	rv += "\t -- \"!g admin guild add <child guild name> <parent guild name>\" (\"!g a g a <child> <parent>\") - Add sub-guild to a parent sub-guild\n"
 	rv += "\t -- \"!g admin guild rename <old sub-guild name> <new name>\" (\"!g a g r <old> <new>\") - Rename sub-guild\n"
-	rv += "\t -- \"!g admin guild move <child guild name> main\" (\"!g a g m <name> main\") - Move subguild to a the main level\n"
-	rv += "\t -- \"!g admin guild move <child guild name> <new parent guild>\" (\"!g a g m <name> <new parent>\") - Move subguild to a new parent\n"
+	rv += "\t -- \"!g admin guild move <child guild name> main\" (\"!g a g m <name> main\") - Move sub-guild to a the main level\n"
+	rv += "\t -- \"!g admin guild move <child guild name> <new parent guild>\" (\"!g a g m <name> <new parent>\") - Move sub-guild to a new parent\n"
 	rv += "\t -- \"!g admin guild remove <child guild name>\" (\"!g a g remove <name>\") - Remove sub-guild\n"
 	rv += "Be aware that your ability to modify structure depends on the guild you're assigned to.\n"
 

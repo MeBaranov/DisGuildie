@@ -9,9 +9,7 @@ import (
 
 func TestUserAdd(t *testing.T) {
 	for n, d := range testable {
-		u := &database.User{
-			Id: "did1",
-		}
+		u := uuid.New().String()
 
 		perm := &database.GuildPermission{TopGuild: "gdid11", GuildId: uuid.New(), Permissions: 10}
 		guilds := map[string]*database.GuildPermission{perm.TopGuild: perm}
@@ -19,14 +17,11 @@ func TestUserAdd(t *testing.T) {
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
-		}
-		if rc == u {
-			t.Fatalf("[%v] Duplicate of character expected, received original", n)
 		}
 
 		rc, err = d.AddUser(u, perm)
@@ -43,16 +38,14 @@ func TestUserAdd(t *testing.T) {
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
 
-		u = &database.User{
-			Id: "did12",
-		}
+		u = uuid.New().String()
 		_, err = d.AddUser(u, perm)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
@@ -61,7 +54,7 @@ func TestUserAdd(t *testing.T) {
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
@@ -72,11 +65,9 @@ func TestUserAdd(t *testing.T) {
 
 func TestUserGetD(t *testing.T) {
 	for n, d := range testable {
-		u := &database.User{
-			Id: "did2",
-		}
+		u := uuid.New().String()
 
-		rc, err := d.GetUserD("did2")
+		rc, err := d.GetUserD(u)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
@@ -87,26 +78,23 @@ func TestUserGetD(t *testing.T) {
 		perm := &database.GuildPermission{TopGuild: "gdid21", GuildId: uuid.New(), Permissions: 10}
 		guilds := map[string]*database.GuildPermission{perm.TopGuild: perm}
 		d.AddUser(u, perm)
-		rc, err = d.GetUserD("did2")
+		rc, err = d.GetUserD(u)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
-		if rc == u {
-			t.Fatalf("[%v] Duplicate of character expected, received original", n)
-		}
 
 		d.AddUser(u, perm)
-		rc, err = d.GetUserD("did2")
+		rc, err = d.GetUserD(u)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
@@ -116,27 +104,25 @@ func TestUserGetD(t *testing.T) {
 		perm2 := &database.GuildPermission{TopGuild: "gdid22", GuildId: uuid.New(), Permissions: 11}
 		guilds[perm2.TopGuild] = perm2
 		d.AddUser(u, perm2)
-		rc, err = d.GetUserD("did2")
+		rc, err = d.GetUserD(u)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
 
-		u = &database.User{
-			Id: "did22",
-		}
+		u = uuid.New().String()
 		d.AddUser(u, perm)
 		d.AddUser(u, perm2)
-		rc, err = d.GetUserD("did22")
+		rc, err = d.GetUserD(u)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
@@ -147,9 +133,7 @@ func TestUserGetD(t *testing.T) {
 
 func TestUserGetInGuild(t *testing.T) {
 	for n, d := range testable {
-		u := &database.User{
-			Id: "TestUserGetInGuild_udid",
-		}
+		u := uuid.New().String()
 		perm := &database.GuildPermission{TopGuild: "TestUserGetInGuild_gdid", GuildId: uuid.New(), Permissions: 10}
 		perm2 := &database.GuildPermission{TopGuild: "TestUserGetInGuild_gdid2", GuildId: uuid.New(), Permissions: 11}
 
@@ -170,9 +154,6 @@ func TestUserGetInGuild(t *testing.T) {
 		if rcs != nil && len(rcs) != 1 {
 			t.Fatalf("[%v] Wrong amount of users returned. Received: %v, expected: %v", n, len(rcs), 1)
 		}
-		if rcs[0] == u {
-			t.Fatalf("[%v] Duplicate of character expected, received original", n)
-		}
 
 		d.AddUser(u, perm2)
 
@@ -184,9 +165,7 @@ func TestUserGetInGuild(t *testing.T) {
 			t.Fatalf("[%v] Wrong amount of users returned. Received: %v, expected: %v", n, len(rcs), 1)
 		}
 
-		u = &database.User{
-			Id: "did22",
-		}
+		u = uuid.New().String()
 		d.AddUser(u, perm)
 		rcs, err = d.GetUsersInGuild(perm.TopGuild)
 		if err != nil {
@@ -208,13 +187,11 @@ func TestUserGetInGuild(t *testing.T) {
 
 func TestUserSetPermissions(t *testing.T) {
 	for n, d := range testable {
-		u := &database.User{
-			Id: "did3",
-		}
+		u := uuid.New().String()
 
 		perm := &database.GuildPermission{TopGuild: "gdid31", GuildId: uuid.New(), Permissions: 10}
 		perm2 := &database.GuildPermission{TopGuild: "gdid32", GuildId: uuid.New(), Permissions: 11}
-		rc, err := d.SetUserPermissions("did3", perm)
+		rc, err := d.SetUserPermissions(u, perm)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
@@ -224,7 +201,7 @@ func TestUserSetPermissions(t *testing.T) {
 
 		d.AddUser(u, perm)
 
-		rc, err = d.SetUserPermissions("did3", perm2)
+		rc, err = d.SetUserPermissions(u, perm2)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
@@ -239,27 +216,24 @@ func TestUserSetPermissions(t *testing.T) {
 			perm.TopGuild:  perm,
 			perm2.TopGuild: perm2,
 		}
-		rc, err = d.SetUserPermissions("did3", perm)
+		rc, err = d.SetUserPermissions(u, perm)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
-		if rc == u {
-			t.Fatalf("[%v] Duplicate of character expected, received original", n)
-		}
 
 		perm2 = &database.GuildPermission{TopGuild: "gdid32", GuildId: perm2.GuildId, Permissions: 1000}
 		guilds[perm2.TopGuild] = perm2
-		rc, err = d.SetUserPermissions("did3", perm2)
+		rc, err = d.SetUserPermissions(u, perm2)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
@@ -270,14 +244,11 @@ func TestUserSetPermissions(t *testing.T) {
 
 func TestUserSetSubguild(t *testing.T) {
 	for n, d := range testable {
-		udid := "did7"
-		u := &database.User{
-			Id: udid,
-		}
+		u := uuid.New().String()
 
 		perm := &database.GuildPermission{TopGuild: "gdid71", GuildId: uuid.New(), Permissions: 10}
 		perm2 := &database.GuildPermission{TopGuild: "gdid72", GuildId: uuid.New(), Permissions: 10}
-		rc, err := d.SetUserSubGuild(udid, perm)
+		rc, err := d.SetUserSubGuild(u, perm)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
@@ -287,7 +258,7 @@ func TestUserSetSubguild(t *testing.T) {
 
 		d.AddUser(u, perm)
 
-		rc, err = d.SetUserSubGuild(udid, perm2)
+		rc, err = d.SetUserSubGuild(u, perm2)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
@@ -302,27 +273,24 @@ func TestUserSetSubguild(t *testing.T) {
 			perm.TopGuild:  perm,
 			perm2.TopGuild: perm2,
 		}
-		rc, err = d.SetUserSubGuild(udid, perm)
+		rc, err = d.SetUserSubGuild(u, perm)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
-		if rc == u {
-			t.Fatalf("[%v] Duplicate of character expected, received original", n)
-		}
 
 		perm2 = &database.GuildPermission{TopGuild: "gdid72", GuildId: uuid.New(), Permissions: 10}
 		guilds[perm2.TopGuild] = perm2
-		rc, err = d.SetUserSubGuild(udid, perm2)
+		rc, err = d.SetUserSubGuild(u, perm2)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
@@ -333,13 +301,11 @@ func TestUserSetSubguild(t *testing.T) {
 
 func TestUserRemove(t *testing.T) {
 	for n, d := range testable {
-		u := &database.User{
-			Id: "did4",
-		}
+		u := uuid.New().String()
 
 		perm := &database.GuildPermission{TopGuild: "gdid41", GuildId: uuid.New(), Permissions: 10}
 		perm2 := &database.GuildPermission{TopGuild: "gdid42", GuildId: uuid.New(), Permissions: 11}
-		rc, err := d.RemoveUserD("did4", perm.TopGuild)
+		rc, err := d.RemoveUserD(u, perm.TopGuild)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
@@ -349,7 +315,7 @@ func TestUserRemove(t *testing.T) {
 
 		d.AddUser(u, perm)
 
-		rc, err = d.RemoveUserD("did4", perm2.TopGuild)
+		rc, err = d.RemoveUserD(u, perm2.TopGuild)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
@@ -360,26 +326,23 @@ func TestUserRemove(t *testing.T) {
 		d.AddUser(u, perm2)
 
 		guilds := map[string]*database.GuildPermission{perm2.TopGuild: perm2}
-		rc, err = d.RemoveUserD("did4", perm.TopGuild)
+		rc, err = d.RemoveUserD(u, perm.TopGuild)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
-		if rc == u {
-			t.Fatalf("[%v] Duplicate of character expected, received original", n)
-		}
 
 		delete(guilds, perm2.TopGuild)
-		rc, err = d.RemoveUserD("did4", perm2.TopGuild)
+		rc, err = d.RemoveUserD(u, perm2.TopGuild)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
@@ -390,11 +353,9 @@ func TestUserRemove(t *testing.T) {
 
 func TestUserErase(t *testing.T) {
 	for n, d := range testable {
-		u := &database.User{
-			Id: "did5",
-		}
+		u := uuid.New().String()
 
-		rc, err := d.EraseUserD("did5")
+		rc, err := d.EraseUserD(u)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
@@ -406,21 +367,18 @@ func TestUserErase(t *testing.T) {
 		d.AddUser(u, perm)
 		guilds := map[string]*database.GuildPermission{perm.TopGuild: perm}
 
-		rc, err = d.EraseUserD("did5")
+		rc, err = d.EraseUserD(u)
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {
 			t.Fatalf("[%v] Wrong guild set returned. Actual: %v, expected: %v", n, rc.Guilds, guilds)
 		}
-		if rc == u {
-			t.Fatalf("[%v] Duplicate of character expected, received original", n)
-		}
 
-		rc, err = d.GetUserD("did5")
+		rc, err = d.GetUserD(u)
 		if err == nil {
 			t.Fatalf("[%v] Error expected. Received: %v", n, rc)
 		}
@@ -434,7 +392,7 @@ func TestUserErase(t *testing.T) {
 		if err != nil {
 			t.Fatalf("[%v] No errors expected. Received: %v", n, err)
 		}
-		if rc.Id != u.Id {
+		if rc.Id != u {
 			t.Fatalf("[%v] Wrong user returned. Actual: %v, expected: %v", n, rc, u)
 		}
 		if !guildSetsEqual(rc.Guilds, guilds) {

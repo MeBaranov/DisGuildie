@@ -85,7 +85,7 @@ type DataProvider interface {
 	RemoveGuildStat(g uuid.UUID, n string) (*Guild, error)
 	RemoveAllGuildStats(g uuid.UUID) (*Guild, error)
 
-	AddUser(u *User, g *GuildPermission) (*User, error)
+	AddUser(d string, g *GuildPermission) (*User, error)
 	GetUserD(d string) (*User, error)
 	GetUsersInGuild(d string) ([]*User, error)
 	SetUserPermissions(u string, g *GuildPermission) (*User, error)

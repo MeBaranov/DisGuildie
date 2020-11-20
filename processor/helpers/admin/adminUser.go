@@ -333,7 +333,7 @@ func (ap *AdminUserProcessor) reigsterUser(id string, guild *database.Guild, m m
 		TopGuild:    guild.DiscordId,
 	}
 
-	dbu, err = ap.Prov.AddUser(dbu, dbgp)
+	dbu, err = ap.Prov.AddUser(dbu.Id, dbgp)
 	if err != nil {
 		return err
 	}
